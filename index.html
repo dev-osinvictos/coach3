@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coach Appointment Payment</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Ethers.js for Web3 interaction -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js"></script>
+    <style>
+        /* Custom styles for aesthetic font and subtle background */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .card {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Main Container Card -->
+    <div class="card w-full max-w-md bg-white p-8 rounded-xl border border-gray-200">
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-6 text-center">Book Your Session</h1>
+
+        <div id="status-display" class="mb-6 p-4 rounded-lg text-center font-medium" role="status">
+            Please connect your Ethereum wallet.
+        </div>
+
+        <!-- Connection Details -->
+        <div id="connection-info" class="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg hidden">
+            <p class="text-sm font-semibold text-indigo-700">Wallet Connected:</p>
+            <p id="account-display" class="text-sm font-mono text-indigo-900 truncate mt-1"></p>
+            <p class="text-sm font-semibold text-indigo-700 mt-2">Cost:</p>
+            <p class="text-lg font-bold text-indigo-900">0.1 Sepolia ETH</p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="space-y-4">
+            <button id="connect-btn" 
+                    class="w-full py-3 px-6 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition duration-150 ease-in-out disabled:opacity-50"
+                    onclick="connectWallet()">
+                Connect Wallet
+            </button>
+            
+            <button id="book-btn" 
+                    class="w-full py-3 px-6 bg-green-500 text-white font-bold rounded-xl shadow-md hover:bg-green-600 transition duration-150 ease-in-out disabled:opacity-50 hidden"
+                    onclick="bookAppointment()"
+                    disabled>
+                Pay 0.1 ETH and Book Appointment
+            </button>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading-spinner" class="mt-6 text-center hidden">
+            <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-500 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+                role="status">
+            </div>
+            <p class="text-indigo-600 mt-2 font-medium">Processing Transaction...</p>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Web3 Configuration ---
+        const { ethers } = window;
+        const COACH_ADDRESS = "0x4dF18e7e10F57A33e145B7f73111C4736fE72F19"; // Placeholder address
+        const SEPOLIA_CHAIN_ID = 11155111; // Sepolia Network Chain ID
+        const APPOINTMENT_COST_ETH = 0.1;
+
+        // --- DOM Elements ---
+        const statusDisplay = document.getElementById('status-display');
+        const connectBtn = document.getElementById('connect-btn');
+        const bookBtn = document.getElementById('book-btn');
+        const accountDisplay = document.getElementById('account-display');
+        const connectionInfo = document.getElementById('connection-info');
+        const loadingSpinner = document.getElementById('loading-spinner');
+
+        let provider = null;
+        let signer = null;
+
+        // --- Utility Functions ---
+
+        /** Updates the status message in the UI with color and text. */
+        function updateStatus(text, type = 'info') {
+            statusDisplay.textContent = text;
+            statusDisplay.className = 'mb-6 p-4 rounded-lg text-center font-medium'; // Reset classes
+            
+            switch (type) {
+                case 'success':
+                    statusDisplay.classList.add('bg-green-100', 'text-green-800');
+                    break;
+                case 'error':
+                    statusDisplay.classList.add('bg-red-100', 'text-red-800');
+                    break;
+                case 'warning':
+                    statusDisplay.classList.add('bg-yellow-100', 'text-yellow-800');
+                    break;
+                case 'info':
+                default:
+                    statusDisplay.classList.add('bg-blue-100', 'text-blue-800');
+                    break;
+            }
+        }
+
+        /** Checks if the current network is Sepolia. */
+        async function checkNetwork(network) {
+            if (network.chainId !== SEPOLIA_CHAIN_ID) {
+                updateStatus("Please switch your wallet to the Sepolia Test Network.", 'warning');
+                bookBtn.disabled = true;
+                return false;
+            }
+            updateStatus("Wallet connected on Sepolia. Ready to pay.", 'info');
+            bookBtn.disabled = false;
+            return true;
+        }
+
+        /** Handles wallet connection and network setup. */
+        async function connectWallet() {
+            if (typeof window.ethereum === 'undefined') {
+                updateStatus("MetaMask or other Ethereum provider not detected. Please install one.", 'error');
+                return;
+            }
+
+            try {
+                connectBtn.disabled = true;
+                updateStatus("Connecting wallet...", 'info');
+                
+                // Use Ethers.js v6 to connect
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                
+                const network = await provider.getNetwork();
+                const account = await signer.getAddress();
+
+                // Update UI for successful connection
+                connectBtn.classList.add('hidden');
+                bookBtn.classList.remove('hidden');
+                connectionInfo.classList.remove('hidden');
+                accountDisplay.textContent = account;
+
+                // Set up event listener for network changes
+                window.ethereum.on('chainChanged', (chainId) => {
+                    // Reload the page is generally safer for a simpler app
+                    window.location.reload(); 
+                });
+
+                // Check network status
+                await checkNetwork(network);
+
+            } catch (error) {
+                connectBtn.disabled = false;
+                bookBtn.classList.add('hidden');
+                connectionInfo.classList.add('hidden');
+                console.error("Connection failed:", error);
+                updateStatus(`Connection failed: ${error.message || 'Check console for details.'}`, 'error');
+            }
+        }
+
+
+        /** Initiates the payment transaction. */
+        async function bookAppointment() {
+            if (!signer) {
+                updateStatus("Wallet not connected. Please connect first.", 'error');
+                return;
+            }
+
+            // Disable button and show spinner
+            bookBtn.disabled = true;
+            loadingSpinner.classList.remove('hidden');
+            updateStatus("Waiting for payment confirmation in your wallet...", 'warning');
+
+            try {
+                const tx = await signer.sendTransaction({
+                    to: COACH_ADDRESS,
+                    value: ethers.parseEther(APPOINTMENT_COST_ETH.toString()), // Convert 0.1 to BigInt Wei
+                });
+
+                // Transaction sent, wait for confirmation
+                updateStatus(`Transaction sent! Waiting for confirmation (Hash: ${tx.hash.substring(0, 10)}...).`, 'warning');
+
+                const receipt = await tx.wait(); // Wait for 1 confirmation block
+
+                loadingSpinner.classList.add('hidden');
+
+                if (receipt && receipt.status === 1) {
+                    updateStatus(`Payment successful! Your appointment is booked. Transaction Hash: ${receipt.hash}`, 'success');
+                } else {
+                    updateStatus("Transaction failed on the blockchain.", 'error');
+                    bookBtn.disabled = false; // Re-enable booking button if failed
+                }
+
+            } catch (error) {
+                loadingSpinner.classList.add('hidden');
+                bookBtn.disabled = false; // Re-enable booking button
+                
+                let errorMessage = "Transaction aborted or failed.";
+                if (error.code === 'ACTION_REJECTED') {
+                    errorMessage = "Transaction rejected by user in the wallet.";
+                } else if (error.message) {
+                    // Attempt to extract a more specific message if available
+                    errorMessage = error.message.includes('insufficient funds') ? 
+                                   "Insufficient funds for the transaction." : 
+                                   `Payment failed: ${error.message.substring(0, 100)}...`;
+                }
+
+                console.error("Payment error:", error);
+                updateStatus(errorMessage, 'error');
+            }
+        }
+
+        // Initial check on load
+        window.onload = () => {
+             if (typeof window.ethereum !== 'undefined') {
+                updateStatus("MetaMask detected. Click 'Connect Wallet' to begin.");
+             } else {
+                updateStatus("MetaMask not found. Please install a Web3 wallet.", 'error');
+             }
+        };
+    </script>
+</body>
+</html>
+
