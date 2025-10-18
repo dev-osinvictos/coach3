@@ -14,8 +14,8 @@
   <script type="module">
   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-  const SUPABASE_URL = window.__supabase_url;
-  const SUPABASE_ANON_KEY = window.__supabase_anon_key;
+  const SUPABASE_URL = "https://kzcjcykzajciczksdyir.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6Y2pjeWt6YWpjaWN6a3NkeWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3MzM3MzEsImV4cCI6MjA3NjMwOTczMX0.h_IQIy4baRW-rpWmuqpIk_vf4p2FLsXHCoychONkiJU";
 
   window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -39,9 +39,6 @@
   <!-- Supabase SDK for uploads -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-
-  const SUPABASE_URL = "https://kzcjcykzajciczksdyir.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6Y2pjeWt6YWpjaWN6a3NkeWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3MzM3MzEsImV4cCI6MjA3NjMwOTczMX0.h_IQIy4baRW-rpWmuqpIk_vf4p2FLsXHCoychONkiJU";
 
     // Create Supabase client
     window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
