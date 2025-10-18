@@ -87,23 +87,6 @@
   }
 };
   </script>
-<script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
-<script>
-async function checkBalance() {
-  if (!window.ethereum) return alert("Please connect MetaMask first.");
-
-  const provider = new ethers.BrowserProvider(window.ethereum);
-  const signer = await provider.getSigner();
-  const address = await signer.getAddress();
-  const balance = await provider.getBalance(address);
-
-  console.log(`💰 Wallet: ${address}`);
-  console.log(`💎 Balance: ${ethers.formatEther(balance)} ETH`);
-  alert(`💎 ${ethers.formatEther(balance)} Sepolia ETH`);
-}
-</script>
-
-<button onclick="checkBalance()">Check Balance</button>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
@@ -182,19 +165,21 @@ async function checkBalance() {
     });
   }
 
-waitForFirebaseConfig().then(firebaseConfig => {
-  if (!firebaseConfig) {
-    console.error("❌ Firebase config not injected by server.");
-  } else {
-    console.log("🔥 Firebase config detected late:", firebaseConfig);
-  }
+    waitForFirebaseConfig().then(firebaseConfig => {
+      if (!firebaseConfig) {
+        console.error("❌ Firebase config not injected by server.");
+      } else {
+        console.log("🔥 Firebase config detected late:", firebaseConfig);
+      }
+    });
 
-  // 🔹 Make token global
-  window.initialAuthToken =
-    typeof window.__initial_auth_token !== 'undefined'
-      ? window.__initial_auth_token
-      : null;
-});
+    if (!firebaseConfig) {
+      console.error("❌ Firebase config not injected by server.");
+    } else {
+      console.log("🔥 Firebase config detected late:", firebaseConfig);
+    }
+    const initialAuthToken = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
+
     // --- Constants ---
     const COACH_ADDRESS = "0x8e843477103e3a968b4b335352358f5b12a45a62";
     const SEPOLIA_CHAIN_ID = 11155111;
@@ -235,31 +220,29 @@ waitForFirebaseConfig().then(firebaseConfig => {
     console.log("🔍 Firebase global available:", !!window.firebase);
 
     async function initializeFirebaseAndAuth() {
-    const firebaseConfig = window.__firebase_config;
     if (!window.firebase || !firebaseConfig) {
-      console.error("Firebase SDK or config missing.");
-      updateStatus("Firebase config missing. Check server injection.", 'error');
-      return false;
+    console.error("Firebase SDK or config missing.");
+    updateStatus("Firebase config missing. Check server injection.", 'error');
+    return false;
     }
 
   try {
-      const app = window.firebase.initializeApp(firebaseConfig);
-      db = window.firebase.firestore(app);
-      db.settings({ experimentalForceLongPolling: true });
-      auth = window.firebase.auth(app);
-      window.firebase.firestore.setLogLevel('debug');
+    const app = window.firebase.initializeApp(firebaseConfig);
+    db = window.firebase.getFirestore(app);
+    auth = window.firebase.getAuth(app);
+    window.firebase.setLogLevel('Debug');
 
     let credential;
 
-  if (window.initialAuthToken && window.initialAuthToken !== "null") {
-  credential = await auth.signInWithCustomToken(window.initialAuthToken);
-} else {
-  credential = await auth.signInAnonymously();
-}
+    if (initialAuthToken && initialAuthToken !== "null") {
+      credential = await window.firebase.signInWithCustomToken(auth, initialAuthToken);
+    } else {
+      credential = await window.firebase.signInAnonymously(auth);
+    }
 
     // 🔹 Espera garantir que o usuário esteja definido
     await new Promise((resolve) => {
-      auth.onAuthStateChanged((user) => {
+      window.firebase.onAuthStateChanged(auth, (user) => {
         if (user) {
           userId = user.uid;
           console.log("✅ Firebase Auth success:", userId);
@@ -329,10 +312,18 @@ async function saveBooking(payerAddress, txHash, selectedSlot, fileURL = null) {
   };
 
   try {
-    const docRef = await db.collection("bookings").add(bookingData);
-    console.log("✅ Booking added with ID: ", docRef.id);
-  } catch (error) {
-    console.error("❌ Error adding document to Firestore:", error);
+    // Caminho corrigido (coleção válida)
+    const collectionPath = `bookings/${userId}`;
+    const docRef = await window.firebase.addDoc(
+      window.firebase.collection(db, collectionPath),
+      bookingData
+    );
+
+    console.log("✅ Booking saved to Firestore:", docRef.id);
+    return true;
+  } catch (e) {
+    console.error("❌ Error adding document to Firestore:", e);
+    return false;
   }
 }
 
@@ -390,4 +381,3 @@ async function saveBooking(payerAddress, txHash, selectedSlot, fileURL = null) {
   </script>
 </body>
 </html>
-
