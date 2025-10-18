@@ -59,7 +59,7 @@
             <p class="text-sm font-semibold text-indigo-700">Wallet Connected:</p>
             <p id="account-display" class="text-sm font-mono text-indigo-900 truncate mt-1"></p>
             <p class="text-sm font-semibold text-indigo-700 mt-2">Cost:</p>
-            <p class="text-lg font-bold text-indigo-900" id="cost-display">0.000001 Sepolia ETH</p>
+            <p class="text-lg font-bold text-indigo-900" id="cost-display">0.000002 Sepolia ETH</p>
         </div>
 
         <!-- Appointment Selection -->
@@ -85,7 +85,7 @@
                     class="w-full py-3 px-6 bg-green-500 text-white font-bold rounded-xl shadow-md hover:bg-green-600 transition duration-150 ease-in-out disabled:opacity-50 hidden"
                     onclick="bookAppointment()"
                     disabled>
-                Pay 0.000001 ETH and Book Appointment
+                Pay 0.000002 ETH and Book Appointment
             </button>
         </div>
 
@@ -104,14 +104,26 @@
         const { ethers } = window;
         // Firebase configuration variables provided by the Canvas environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        
+        // --- Robust Firebase Config Parsing ---
+        let firebaseConfig = null;
+        try {
+            // Only attempt to parse if the variable exists and is not empty.
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                firebaseConfig = JSON.parse(__firebase_config);
+            }
+        } catch (e) {
+            console.error("FATAL: Failed to parse __firebase_config environment variable. Data may be malformed.", e);
+            // firebaseConfig remains null, which will be handled in initializeFirebaseAndAuth
+        }
+        
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // --- Web3 Configuration ---
         // Recipient address (Coach's address) - lowercase for Ethers v6 compatibility.
         const COACH_ADDRESS = "0x8e843477103e3a968b4b335352358f5b12a45a62"; 
         const SEPOLIA_CHAIN_ID = 11155111; // Sepolia Network Chain ID
-        const APPOINTMENT_COST_ETH = 0.000001;
+        const APPOINTMENT_COST_ETH = 0.000002;
 
         // --- DOM Elements ---
         const statusDisplay = document.getElementById('status-display');
