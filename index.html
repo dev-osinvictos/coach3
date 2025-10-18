@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -166,20 +167,13 @@
   }
 
     waitForFirebaseConfig().then(firebaseConfig => {
-      if (!firebaseConfig) {
-        console.error("❌ Firebase config not injected by server.");
-      } else {
-        console.log("🔥 Firebase config detected late:", firebaseConfig);
-      }
-    });
-
     if (!firebaseConfig) {
       console.error("❌ Firebase config not injected by server.");
     } else {
       console.log("🔥 Firebase config detected late:", firebaseConfig);
     }
     const initialAuthToken = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
-
+    });
     // --- Constants ---
     const COACH_ADDRESS = "0x8e843477103e3a968b4b335352358f5b12a45a62";
     const SEPOLIA_CHAIN_ID = 11155111;
@@ -220,10 +214,11 @@
     console.log("🔍 Firebase global available:", !!window.firebase);
 
     async function initializeFirebaseAndAuth() {
+    const firebaseConfig = window.__firebase_config;
     if (!window.firebase || !firebaseConfig) {
-    console.error("Firebase SDK or config missing.");
-    updateStatus("Firebase config missing. Check server injection.", 'error');
-    return false;
+      console.error("Firebase SDK or config missing.");
+      updateStatus("Firebase config missing. Check server injection.", 'error');
+      return false;
     }
 
   try {
@@ -381,3 +376,4 @@ async function saveBooking(payerAddress, txHash, selectedSlot, fileURL = null) {
   </script>
 </body>
 </html>
+
