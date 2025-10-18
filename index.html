@@ -12,6 +12,12 @@
 
   <!-- Firebase SDK modules -->
   <script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+  const SUPABASE_URL = window.__supabase_url;
+  const SUPABASE_ANON_KEY = window.__supabase_anon_key;
+
+  window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, addDoc, collection, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
