@@ -166,13 +166,6 @@
   }
 
     waitForFirebaseConfig().then(firebaseConfig => {
-      if (!firebaseConfig) {
-        console.error("❌ Firebase config not injected by server.");
-      } else {
-        console.log("🔥 Firebase config detected late:", firebaseConfig);
-      }
-    });
-
     if (!firebaseConfig) {
       console.error("❌ Firebase config not injected by server.");
     } else {
@@ -220,10 +213,11 @@
     console.log("🔍 Firebase global available:", !!window.firebase);
 
     async function initializeFirebaseAndAuth() {
+    const firebaseConfig = window.__firebase_config;
     if (!window.firebase || !firebaseConfig) {
-    console.error("Firebase SDK or config missing.");
-    updateStatus("Firebase config missing. Check server injection.", 'error');
-    return false;
+      console.error("Firebase SDK or config missing.");
+      updateStatus("Firebase config missing. Check server injection.", 'error');
+      return false;
     }
 
   try {
