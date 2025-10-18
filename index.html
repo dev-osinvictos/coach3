@@ -31,20 +31,49 @@
     console.log("✅ Supabase client initialized:", SUPABASE_URL);
   }
 
-  // Example: upload helper
   window.uploadBookingFile = async (file, userId) => {
-    if (!file) return null;
-    const safeUserId = userId || "anonymous";
-    const path = `${safeUserId}/${Date.now()}_${file.name}`;
-    const { data, error } = await window.supabase.storage.from("bookings").upload(path, file);
+  if (!file) {
+    console.warn("Nenhum arquivo selecionado.");
+    return null;
+  }
+
+  const safeUserId = userId || "anonymous";
+  const path = `${safeUserId}/${Date.now()}_${file.name}`;
+
+  console.log("📤 Enviando para Supabase:", {
+    bucket: "bookings",
+    path,
+    fileName: file.name,
+    sizeKB: (file.size / 1024).toFixed(1),
+    type: file.type,
+  });
+
+  try {
+    // Tenta o upload normalmente
+    const { data, error } = await window.supabase.storage
+      .from("bookings")
+      .upload(path, file);
+
+    // --- ⚙️ Detalhes completos do retorno ---
+    console.log("🧩 Supabase response:", { data, error });
+
     if (error) {
-      console.error("Supabase upload failed:", error);
+      console.error("❌ Supabase upload failed:", error);
+      alert(`Upload falhou: ${error.message}\n\nVerifique o console para mais detalhes.`);
       return null;
     }
+
     const publicURL = `${SUPABASE_URL}/storage/v1/object/public/bookings/${path}`;
-    console.log("Uploaded file:", publicURL);
+    console.log("✅ Upload concluído:", publicURL);
     return publicURL;
-  };
+
+  } catch (e) {
+    // Se for erro de rede ou de configuração
+    console.error("🔥 Erro inesperado no upload:", e);
+    alert(`Erro inesperado: ${e.message}`);
+    return null;
+  }
+};
 </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
