@@ -184,30 +184,45 @@
       return true;
     }
 
-    async function initializeFirebaseAndAuth() {
-      if (!window.firebase || !firebaseConfig) {
-        console.error("Firebase SDK or config missing.");
-        updateStatus("Firebase config missing. Check server injection.", 'error');
-        return;
-      }
-      try {
-        const app = window.firebase.initializeApp(firebaseConfig);
-        db = window.firebase.getFirestore(app);
-        auth = window.firebase.getAuth(app);
-        window.firebase.setLogLevel('Debug');
-        if (initialAuthToken && initialAuthToken !== "null") {
-          const cred = await window.firebase.signInWithCustomToken(auth, initialAuthToken);
-          userId = cred.user.uid;
-        } else {
-          const cred = await window.firebase.signInAnonymously(auth);
-          userId = cred.user.uid;
-        }
-        console.log("Firebase Auth success:", userId);
-      } catch (e) {
-        console.error("Firebase init failed:", e);
-        updateStatus("Firebase init/auth failed: " + e.message, 'error');
-      }
+async function initializeFirebaseAndAuth() {
+  if (!window.firebase || !firebaseConfig) {
+    console.error("Firebase SDK or config missing.");
+    updateStatus("Firebase config missing. Check server injection.", 'error');
+    return false;
+  }
+
+  try {
+    const app = window.firebase.initializeApp(firebaseConfig);
+    db = window.firebase.getFirestore(app);
+    auth = window.firebase.getAuth(app);
+    window.firebase.setLogLevel('Debug');
+
+    let credential;
+
+    if (initialAuthToken && initialAuthToken !== "null") {
+      credential = await window.firebase.signInWithCustomToken(auth, initialAuthToken);
+    } else {
+      credential = await window.firebase.signInAnonymously(auth);
     }
+
+    // 🔹 Espera garantir que o usuário esteja definido
+    await new Promise((resolve) => {
+      window.firebase.onAuthStateChanged(auth, (user) => {
+        if (user) {
+          userId = user.uid;
+          console.log("✅ Firebase Auth success:", userId);
+          resolve();
+        }
+      });
+    });
+
+    return true;
+  } catch (e) {
+    console.error("❌ Firebase initialization or auth failed:", e);
+    updateStatus("Firebase init/auth failed: " + e.message, 'error');
+    return false;
+  }
+}
 
     async function connectWallet() {
       if (!window.ethereum) {
@@ -223,7 +238,11 @@
         signer = await provider.getSigner();
         const network = await provider.getNetwork();
         const account = await signer.getAddress();
-
+        const firebaseReady = await initializeFirebaseAndAuth();
+        if (!firebaseReady) {
+          updateStatus("Firebase initialization failed.", "error");
+          return;
+        }
         connectBtn.classList.add('hidden');
         bookBtn.classList.remove('hidden');
         connectionInfo.classList.remove('hidden');
