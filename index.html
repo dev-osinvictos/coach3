@@ -222,22 +222,22 @@
     }
 
   try {
-    const app = window.firebase.initializeApp(firebaseConfig);
-    db = window.firebase.getFirestore(app);
-    auth = window.firebase.getAuth(app);
-    window.firebase.setLogLevel('Debug');
+      const app = window.firebase.initializeApp(firebaseConfig);
+      db = window.firebase.firestore(app);
+      auth = window.firebase.auth(app);
+      window.firebase.firestore.setLogLevel('debug');
 
     let credential;
 
     if (initialAuthToken && initialAuthToken !== "null") {
       credential = await window.firebase.signInWithCustomToken(auth, initialAuthToken);
     } else {
-      credential = await window.firebase.signInAnonymously(auth);
+      credential = await auth.signInAnonymously();
     }
 
     // 🔹 Espera garantir que o usuário esteja definido
     await new Promise((resolve) => {
-      window.firebase.onAuthStateChanged(auth, (user) => {
+      auth.onAuthStateChanged((user) => {
         if (user) {
           userId = user.uid;
           console.log("✅ Firebase Auth success:", userId);
