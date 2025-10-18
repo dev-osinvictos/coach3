@@ -35,7 +35,7 @@
   window.uploadBookingFile = async (file, userId) => {
     if (!file) return null;
     const safeUserId = userId || "anonymous";
-    const path = `bookings/${safeUserId}/${Date.now()}_${file.name}`;
+    const path = `${safeUserId}/${Date.now()}_${file.name}`;
     const { data, error } = await window.supabase.storage.from("bookings").upload(path, file);
     if (error) {
       console.error("Supabase upload failed:", error);
