@@ -168,8 +168,42 @@
             return true;
         }
 
+        /** * Polls the environment for the Firebase configuration variables with a timeout. 
+         * This handles the timing issue where the config isn't immediately available.
+         */
+        async function waitForFirebaseConfig(timeout = 5000, interval = 100) {
+            const startTime = Date.now();
+            let configString = null;
+            let token = null;
+
+            while (Date.now() - startTime < timeout) {
+                configString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+                token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                if (configString) {
+                    // Success: Config string is available, now parse it
+                    try {
+                        return { 
+                            config: JSON.parse(configString), 
+                            token: token 
+                        };
+                    } catch (e) {
+                        console.error(`FATAL: Failed to parse __firebase_config. Raw string: ${configString}`, e);
+                        // Return null on critical parsing error
+                        return { config: null, token: null };
+                    }
+                }
+                
+                // Wait for the next interval
+                await new Promise(resolve => setTimeout(resolve, interval));
+            }
+            
+            // Timeout: return null config
+            return { config: null, token: null };
+        }
+
         /** * Handles Firebase initialization and authentication. 
-         * Takes config and token as arguments to ensure we use values read after the environment setup delay.
+         * Takes the already parsed config object and token string.
          */
         async function initializeFirebaseAndAuth(config, token) {
             if (!window.firebase) {
@@ -177,8 +211,7 @@
                 return;
             }
             if (!config) {
-                // This error means the global config variable was missing/empty even after the delay.
-                console.error("Firebase Error: The necessary __firebase_config environment variable is missing or empty. Firestore save will not be possible.");
+                console.error("Firebase Error: The necessary __firebase_config is missing or empty. Firestore save will not be possible.");
                 return;
             }
 
@@ -243,27 +276,12 @@
 
             try {
                 connectBtn.disabled = true;
-                updateStatus("Connecting wallet...", 'info');
+                updateStatus("Connecting wallet and initializing services...", 'info');
                 
-                // CRITICAL FIX: Increased delay to 500ms for environment variables to be fully injected
-                await new Promise(resolve => setTimeout(resolve, 500)); 
-                
-                // --- Robust Firebase Config Parsing (DEFERRED) ---
-                let currentFirebaseConfig = null;
-                // Read the raw string (or 'undefined') from the global environment
-                const configString = typeof __firebase_config !== 'undefined' ? __firebase_config : 'undefined';
-                
-                try {
-                    if (configString !== 'undefined' && configString) {
-                        currentFirebaseConfig = JSON.parse(configString);
-                    }
-                } catch (e) {
-                    console.error(`FATAL: Failed to parse __firebase_config. Raw string: ${configString}`, e);
-                }
-                const currentInitialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                // -----------------------------------------------------
+                // Use a robust polling mechanism to wait for environment variables to be injected
+                const { config: currentFirebaseConfig, token: currentInitialAuthToken } = await waitForFirebaseConfig();
 
-                // Initialize Firebase first using the current configuration
+                // Initialize Firebase first using the retrieved configuration
                 await initializeFirebaseAndAuth(currentFirebaseConfig, currentInitialAuthToken);
 
                 // Check if Firebase initialization failed due to missing config (db will be null)
