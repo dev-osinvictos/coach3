@@ -9,15 +9,18 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js"></script>
-  <!-- Firebase SDKs (v9 compat for easier integration) -->
+  
+  <!-- Firebase SDKs (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-<script>
-  window.firebase = firebase;
-</script>
+  <!-- 🔹 Garante firebase no escopo global ANTES dos módulos -->
+  <script>
+  window.globalThis.firebase = firebase;
+  </script>
 
+  <!-- Supabase + config injection -->
   <script type="module">
   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -192,12 +195,14 @@
       return true;
     }
 
-async function initializeFirebaseAndAuth() {
-  if (!window.firebase || !firebaseConfig) {
+    console.log("🔍 Firebase global available:", !!window.firebase);
+
+    async function initializeFirebaseAndAuth() {
+    if (!window.firebase || !firebaseConfig) {
     console.error("Firebase SDK or config missing.");
     updateStatus("Firebase config missing. Check server injection.", 'error');
     return false;
-  }
+    }
 
   try {
     const app = window.firebase.initializeApp(firebaseConfig);
