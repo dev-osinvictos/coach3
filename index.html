@@ -3,11 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coach Appointment Payment</title>
+    <title>Coach Appointment Payment & Booking</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Ethers.js for Web3 interaction -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js"></script>
+    <!-- Load Firebase/Firestore -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, collection, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Expose Firebase services to the global window object for use in the script below
+        window.firebase = {
+            initializeApp,
+            getAuth,
+            signInAnonymously,
+            signInWithCustomToken,
+            onAuthStateChanged,
+            getFirestore,
+            doc,
+            addDoc,
+            collection,
+            setLogLevel
+        };
+    </script>
     <style>
         /* Custom styles for aesthetic font and subtle background */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -39,7 +59,18 @@
             <p class="text-sm font-semibold text-indigo-700">Wallet Connected:</p>
             <p id="account-display" class="text-sm font-mono text-indigo-900 truncate mt-1"></p>
             <p class="text-sm font-semibold text-indigo-700 mt-2">Cost:</p>
-            <p class="text-lg font-bold text-indigo-900" id="cost-display">0.007 Sepolia ETH</p>
+            <p class="text-lg font-bold text-indigo-900" id="cost-display">0.00001 Sepolia ETH</p>
+        </div>
+
+        <!-- Appointment Selection -->
+        <div class="mb-4">
+            <label for="appointment-slot" class="block text-sm font-medium text-gray-700 mb-2">Select Appointment Slot:</label>
+            <select id="appointment-slot" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white" disabled>
+                <option value="" disabled selected>-- Choose a Time --</option>
+                <option value="Mon, 10am UTC (Oct 28)">Monday, Oct 28 (10:00 UTC)</option>
+                <option value="Wed, 2pm UTC (Oct 30)">Wednesday, Oct 30 (14:00 UTC)</option>
+                <option value="Fri, 4pm UTC (Nov 1)">Friday, Nov 1 (16:00 UTC)</option>
+            </select>
         </div>
 
         <!-- Action Buttons -->
@@ -54,7 +85,7 @@
                     class="w-full py-3 px-6 bg-green-500 text-white font-bold rounded-xl shadow-md hover:bg-green-600 transition duration-150 ease-in-out disabled:opacity-50 hidden"
                     onclick="bookAppointment()"
                     disabled>
-                Pay 0.007 ETH and Book Appointment
+                Pay 0.00001 ETH and Book Appointment
             </button>
         </div>
 
@@ -69,14 +100,18 @@
     </div>
 
     <script>
-        // --- Web3 Configuration ---
+        // --- Global Configuration ---
         const { ethers } = window;
-        // IMPORTANT: This is the address that receives the payment (The Coach's address).
-        // It must be a different address than the one paying (your connected wallet).
-        // FIX: Converted address to all lowercase to bypass bad checksum error.
+        // Firebase configuration variables provided by the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // --- Web3 Configuration ---
+        // Recipient address (Coach's address) - lowercase for Ethers v6 compatibility.
         const COACH_ADDRESS = "0x8e843477103e3a968b4b335352358f5b12a45a62"; 
         const SEPOLIA_CHAIN_ID = 11155111; // Sepolia Network Chain ID
-        const APPOINTMENT_COST_ETH = 0.007;
+        const APPOINTMENT_COST_ETH = 0.00001;
 
         // --- DOM Elements ---
         const statusDisplay = document.getElementById('status-display');
@@ -85,9 +120,13 @@
         const accountDisplay = document.getElementById('account-display');
         const connectionInfo = document.getElementById('connection-info');
         const loadingSpinner = document.getElementById('loading-spinner');
+        const appointmentSlot = document.getElementById('appointment-slot');
 
         let provider = null;
         let signer = null;
+        let db = null;
+        let auth = null;
+        let userId = null; // Current authenticated user ID for Firestore
 
         // --- Utility Functions ---
 
@@ -115,7 +154,6 @@
 
         /** Checks if the current network is Sepolia. */
         async function checkNetwork(network) {
-            // Fix: network.chainId is a BigInt in Ethers v6, converting to Number for safe comparison.
             const currentChainId = Number(network.chainId);
 
             if (currentChainId !== SEPOLIA_CHAIN_ID) {
@@ -123,10 +161,72 @@
                 bookBtn.disabled = true;
                 return false;
             }
-            updateStatus("Wallet connected on Sepolia. Ready to pay.", 'info');
-            bookBtn.disabled = false;
+            // Enable booking and slot selection only on correct network
+            updateStatus("Wallet connected on Sepolia. Ready to book.", 'info');
+            appointmentSlot.disabled = false;
+            
+            // Only enable book button if a slot is selected
+            bookBtn.disabled = appointmentSlot.value === ""; 
             return true;
         }
+
+        /** Handles Firebase initialization and authentication. */
+        async function initializeFirebaseAndAuth() {
+            if (!window.firebase || !firebaseConfig) {
+                console.error("Firebase SDK or config not available.");
+                return;
+            }
+
+            try {
+                // Initialize Firebase
+                const app = firebase.initializeApp(firebaseConfig);
+                db = firebase.getFirestore(app);
+                auth = firebase.getAuth(app);
+                firebase.setLogLevel('Debug'); // Enable logging
+
+                // Authenticate
+                if (initialAuthToken) {
+                    const userCredential = await firebase.signInWithCustomToken(auth, initialAuthToken);
+                    userId = userCredential.user.uid;
+                } else {
+                    const userCredential = await firebase.signInAnonymously(auth);
+                    userId = userCredential.user.uid;
+                }
+                console.log("Firebase Auth successful. User ID:", userId);
+            } catch (error) {
+                console.error("Firebase initialization or authentication failed:", error);
+            }
+        }
+
+        /** Saves booking details to Firestore. */
+        async function saveBooking(payerAddress, txHash, selectedSlot) {
+            if (!db || !userId) {
+                console.error("Firestore not initialized or user not authenticated.");
+                return;
+            }
+
+            const bookingData = {
+                payerAddress: payerAddress,
+                coachAddress: COACH_ADDRESS,
+                appointmentTime: selectedSlot,
+                costEth: APPOINTMENT_COST_ETH,
+                transactionHash: txHash,
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                // Path: /artifacts/{appId}/users/{userId}/bookings
+                const collectionPath = `artifacts/${appId}/users/${userId}/bookings`;
+                const docRef = await firebase.addDoc(firebase.collection(db, collectionPath), bookingData);
+                console.log("Booking saved to Firestore with ID:", docRef.id);
+                return true;
+            } catch (e) {
+                console.error("Error adding document to Firestore:", e);
+                return false;
+            }
+        }
+
+        // --- Event Handlers ---
 
         /** Handles wallet connection and network setup. */
         async function connectWallet() {
@@ -139,6 +239,9 @@
                 connectBtn.disabled = true;
                 updateStatus("Connecting wallet...", 'info');
                 
+                // Initialize Firebase first
+                await initializeFirebaseAndAuth();
+
                 // Use Ethers.js v6 to connect
                 provider = new ethers.BrowserProvider(window.ethereum);
                 signer = await provider.getSigner();
@@ -152,9 +255,8 @@
                 connectionInfo.classList.remove('hidden');
                 accountDisplay.textContent = account;
 
-                // Listen for network changes using the standard provider event
+                // Listen for network changes 
                 window.ethereum.on('chainChanged', (chainId) => {
-                    // Reload the page is generally safer for a simpler app
                     window.location.reload(); 
                 });
                 
@@ -170,54 +272,66 @@
             }
         }
 
-
-        /** Initiates the payment transaction. */
+        /** Initiates the payment transaction and saves the booking. */
         async function bookAppointment() {
-            if (!signer) {
-                updateStatus("Wallet not connected. Please connect first.", 'error');
+            const selectedSlot = appointmentSlot.value;
+            if (!signer || !selectedSlot) {
+                updateStatus("Wallet not connected or appointment time not selected.", 'error');
                 return;
             }
 
-            // Disable button and show spinner
+            // Disable UI elements and show spinner
             bookBtn.disabled = true;
+            appointmentSlot.disabled = true;
             loadingSpinner.classList.remove('hidden');
-            updateStatus("Waiting for payment confirmation in your wallet...", 'warning');
+            updateStatus(`Attempting to book: ${selectedSlot}. Waiting for payment confirmation in your wallet...`, 'warning');
+
+            const payerAddress = await signer.getAddress();
 
             try {
-                // Ensure the address receiving the payment is valid
                 if (!ethers.isAddress(COACH_ADDRESS)) {
-                    throw new Error("The recipient coach address is invalid. Please check the application configuration.");
+                    throw new Error("The recipient coach address is invalid.");
                 }
 
-                // APPOINTMENT_COST_ETH is 0.01
+                // 1. Initiate Ethereum Transaction
                 const tx = await signer.sendTransaction({
                     to: COACH_ADDRESS,
-                    value: ethers.parseEther(APPOINTMENT_COST_ETH.toString()), // Convert ETH amount to BigInt Wei
+                    value: ethers.parseEther(APPOINTMENT_COST_ETH.toString()),
                 });
 
-                // Transaction sent, wait for confirmation
+                // 2. Wait for confirmation
                 updateStatus(`Transaction sent! Waiting for confirmation (Hash: ${tx.hash.substring(0, 10)}...).`, 'warning');
 
-                const receipt = await tx.wait(); // Wait for 1 confirmation block
+                const receipt = await tx.wait(); 
 
                 loadingSpinner.classList.add('hidden');
 
                 if (receipt && receipt.status === 1) {
-                    updateStatus(`Payment successful! Your appointment is booked. Transaction Hash: ${receipt.hash}`, 'success');
+                    
+                    // 3. Save Booking to Firestore
+                    const saved = await saveBooking(payerAddress, receipt.hash, selectedSlot);
+                    
+                    const firestoreMessage = saved 
+                        ? "Booking recorded successfully in the database."
+                        : "WARNING: Payment succeeded, but failed to save booking to database. Check console.";
+
+                    updateStatus(`🎉 SUCCESS! Your session for ${selectedSlot} is booked! ${firestoreMessage} You can now monitor your wallet/database and follow up via LinkedIn DM to dev@osinvictos.com.br. Transaction Hash: ${receipt.hash}`, 'success');
+
                 } else {
                     updateStatus("Transaction failed on the blockchain.", 'error');
-                    bookBtn.disabled = false; // Re-enable booking button if failed
+                    bookBtn.disabled = false;
+                    appointmentSlot.disabled = false;
                 }
 
             } catch (error) {
                 loadingSpinner.classList.add('hidden');
-                bookBtn.disabled = false; // Re-enable booking button
+                bookBtn.disabled = false;
+                appointmentSlot.disabled = false;
                 
                 let errorMessage = "Transaction aborted or failed.";
                 if (error.code === 'ACTION_REJECTED') {
                     errorMessage = "Transaction rejected by user in the wallet.";
                 } else if (error.message) {
-                    // Attempt to extract a more specific message if available
                     errorMessage = error.message.includes('insufficient funds') ? 
                                    "Insufficient funds for the transaction." : 
                                    `Payment failed: ${error.message.substring(0, 100)}...`;
@@ -228,7 +342,7 @@
             }
         }
 
-        // Initial check on load
+        // Initial check and listeners on load
         window.onload = () => {
              // We ensure the UI displays the actual configured cost (0.01 ETH)
              document.getElementById('cost-display').textContent = `${APPOINTMENT_COST_ETH} Sepolia ETH`;
@@ -239,6 +353,15 @@
              } else {
                 updateStatus("MetaMask not found. Please install a Web3 wallet.", 'error');
              }
+
+             // Listener to enable/disable book button based on slot selection
+             appointmentSlot.addEventListener('change', () => {
+                if (signer && appointmentSlot.value !== "") {
+                    bookBtn.disabled = false;
+                } else {
+                    bookBtn.disabled = true;
+                }
+             });
         };
     </script>
 </body>
