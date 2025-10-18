@@ -105,20 +105,8 @@
         // Firebase configuration variables provided by the Canvas environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
-        // --- Robust Firebase Config Parsing ---
-        let firebaseConfig = null;
-        try {
-            // Only attempt to parse if the variable exists and is not empty.
-            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                firebaseConfig = JSON.parse(__firebase_config);
-            }
-        } catch (e) {
-            console.error("FATAL: Failed to parse __firebase_config environment variable. Data may be malformed.", e);
-            // firebaseConfig remains null, which will be handled in initializeFirebaseAndAuth
-        }
+        // --- NOTE: Firebase Config Parsing is now moved into connectWallet() after the delay. ---
         
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
         // --- Web3 Configuration ---
         // Recipient address (Coach's address) - lowercase for Ethers v6 compatibility.
         const COACH_ADDRESS = "0x8e843477103e3a968b4b335352358f5b12a45a62"; 
@@ -182,28 +170,31 @@
             return true;
         }
 
-        /** Handles Firebase initialization and authentication. */
-        async function initializeFirebaseAndAuth() {
+        /** * Handles Firebase initialization and authentication. 
+         * Takes config and token as arguments, ensuring we use the latest values 
+         * read after the environment setup delay.
+         */
+        async function initializeFirebaseAndAuth(config, token) {
             if (!window.firebase) {
                 console.error("Firebase Error: SDK modules not loaded into the window.");
                 return;
             }
-            if (!firebaseConfig) {
-                // This explains the "Firebase SDK or config not available" console message.
+            if (!config) {
+                // This console message is what the UI catches to display the Configuration Error.
                 console.error("Firebase Error: The necessary __firebase_config environment variable is missing or empty. Firestore save will not be possible.");
                 return;
             }
 
             try {
                 // Initialize Firebase
-                const app = firebase.initializeApp(firebaseConfig);
+                const app = firebase.initializeApp(config);
                 db = firebase.getFirestore(app);
                 auth = firebase.getAuth(app);
                 firebase.setLogLevel('Debug'); // Enable logging
 
                 // Authenticate
-                if (initialAuthToken) {
-                    const userCredential = await firebase.signInWithCustomToken(auth, initialAuthToken);
+                if (token) {
+                    const userCredential = await firebase.signInWithCustomToken(auth, token);
                     userId = userCredential.user.uid;
                 } else {
                     const userCredential = await firebase.signInAnonymously(auth);
@@ -257,11 +248,24 @@
                 connectBtn.disabled = true;
                 updateStatus("Connecting wallet...", 'info');
                 
-                // ADDED: Small delay to ensure environment variables (like __firebase_config) are fully injected
-                await new Promise(resolve => setTimeout(resolve, 50)); // Wait 50ms for environment to stabilize
+                // Wait 50ms for environment variables to be fully injected
+                await new Promise(resolve => setTimeout(resolve, 50)); 
                 
-                // Initialize Firebase first
-                await initializeFirebaseAndAuth();
+                // --- Robust Firebase Config Parsing (NOW DEFERRED) ---
+                let currentFirebaseConfig = null;
+                try {
+                    // Only attempt to parse if the variable exists and is not empty.
+                    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                        currentFirebaseConfig = JSON.parse(__firebase_config);
+                    }
+                } catch (e) {
+                    console.error("FATAL: Failed to parse __firebase_config environment variable. Data may be malformed.", e);
+                }
+                const currentInitialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                // -----------------------------------------------------
+
+                // Initialize Firebase first using the current configuration
+                await initializeFirebaseAndAuth(currentFirebaseConfig, currentInitialAuthToken);
 
                 // Check if Firebase initialization failed due to missing config (db will be null)
                 if (!db) {
