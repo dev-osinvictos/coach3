@@ -257,12 +257,14 @@
         loadingSpinner.classList.add('hidden');
         if (receipt && receipt.status === 1) {
           // 🆕 Upload optional file to Supabase
-          const file = document.getElementById("booking-file").files[0];
-          let fileURL = null;
-          if (file) {
-            updateStatus("Uploading file to Supabase...", "info");
-            fileURL = await window.uploadBookingFile(file, userId);
-          }
+        const file = document.getElementById("booking-file").files[0];
+        let fileURL = null;
+        const safeUserId = userId || "anonymous";  // fallback if userId isn't ready
+
+        if (file) {
+          updateStatus("Uploading file to Supabase...", "info");
+          fileURL = await window.uploadBookingFile(file, safeUserId);
+        }
           const saved = await saveBooking(payerAddress, receipt.hash, slot, fileURL);
           const msg = saved ? "Booking saved successfully." : "Payment succeeded but booking not saved.";
           updateStatus(`🎉 SUCCESS! ${msg} Tx: ${receipt.hash}`, 'success');
