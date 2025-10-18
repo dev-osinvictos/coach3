@@ -151,18 +151,21 @@
   <script>
     const { ethers } = window;
 
-    // --- Injected Firebase Config (from server.js)
-const firebaseConfig =
-  typeof window.__firebase_config === "object"
-    ? window.__firebase_config
-    : (() => {
-        try {
-          return JSON.parse(window.__firebase_config);
-        } catch (e) {
-          console.error("Failed to parse Firebase config:", e);
-          return null;
-        }
-      })();
+    // Espera até que o config do Firebase esteja disponível no window
+    let firebaseConfig = null;
+    for (let i = 0; i < 50; i++) { // tenta por 5 segundos
+      if (window.__firebase_config) {
+        firebaseConfig = window.__firebase_config;
+        break;
+      }
+      await new Promise(r => setTimeout(r, 100));
+    }
+ 
+    if (!firebaseConfig) {
+      console.error("❌ Firebase config not injected by server.");
+    } else {
+      console.log("🔥 Firebase config detected late:", firebaseConfig);
+    }
     const initialAuthToken = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
 
     // --- Constants ---
