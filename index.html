@@ -135,8 +135,7 @@
 
     <div class="space-y-4">
       <button id="connect-btn"
-        class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700"
-        onclick="connectWallet()">Connect Wallet</button>
+        class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700">Connect Wallet</button>
       <button id="book-btn"
         class="w-full py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 hidden"
         onclick="bookAppointment()" disabled>Pay 0.00001 ETH and Book Appointment</button>
@@ -150,6 +149,21 @@
 
   <script>
     const { ethers } = window;
+
+  // 🔧 Garante que a config do Firebase seja carregada antes do uso
+  function waitForFirebaseConfig(timeoutMs = 5000) {
+    const start = Date.now();
+    return new Promise((resolve) => {
+      const check = () => {
+        if (window.__firebase_config || Date.now() - start > timeoutMs) {
+          resolve(window.__firebase_config || null);
+        } else {
+          setTimeout(check, 100);
+        }
+      };
+      check();
+    });
+  }
 
     waitForFirebaseConfig().then(firebaseConfig => {
       if (!firebaseConfig) {
@@ -358,6 +372,7 @@ async function saveBooking(payerAddress, txHash, selectedSlot, fileURL = null) {
     }
 
     window.onload = () => {
+      document.getElementById("connect-btn").addEventListener("click", connectWallet);
       document.getElementById('cost-display').textContent = `${APPOINTMENT_COST_ETH} Sepolia ETH`;
       document.getElementById('book-btn').textContent = `Pay ${APPOINTMENT_COST_ETH} ETH and Book Appointment`;
       updateStatus(window.ethereum ? "MetaMask detected. Click Connect Wallet to begin." : "Install MetaMask to continue.", window.ethereum ? 'info' : 'error');
