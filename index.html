@@ -10,39 +10,42 @@
   <!-- Ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js"></script>
 
-  <!-- Firebase SDK modules -->
- <!-- Supabase SDK (dynamic injection from server.js) -->
 <script type="module">
   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-  // ✅ Dynamically injected values
-  const SUPABASE_URL = window.__supabase_url;
-  const SUPABASE_ANON_KEY = window.__supabase_anon_key;
+  // Read safely injected JSON config
+  const appConfigEl = document.getElementById("app-config");
+  const { firebaseConfig, supabaseConfig } = JSON.parse(appConfigEl.textContent.trim());
 
-  // Create client
-  window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Assign Firebase config globally
+  window.__firebase_config = JSON.stringify(firebaseConfig);
 
-  // Helper: Upload files to Supabase
+  // Setup Supabase client
+  const SUPABASE_URL = supabaseConfig.url;
+  const SUPABASE_ANON_KEY = supabaseConfig.anonKey;
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error("❌ Supabase configuration missing");
+  } else {
+    window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("✅ Supabase client initialized:", SUPABASE_URL);
+  }
+
+  // Example: upload helper
   window.uploadBookingFile = async (file, userId) => {
     if (!file) return null;
     const safeUserId = userId || "anonymous";
     const path = `bookings/${safeUserId}/${Date.now()}_${file.name}`;
-    const { data, error } = await window.supabase.storage
-      .from("bookings")
-      .upload(path, file);
-
+    const { data, error } = await window.supabase.storage.from("bookings").upload(path, file);
     if (error) {
       console.error("Supabase upload failed:", error);
       return null;
     }
-
-    // Build the public URL
     const publicURL = `${SUPABASE_URL}/storage/v1/object/public/bookings/${path}`;
     console.log("Uploaded file:", publicURL);
     return publicURL;
   };
 </script>
-
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }

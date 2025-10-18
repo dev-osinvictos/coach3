@@ -8,14 +8,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve static files (images, css, etc.)
 app.use(express.static("public"));
 
 app.get("/", (req, res) => {
   const htmlPath = path.join(process.cwd(), "index.html");
   let html = fs.readFileSync(htmlPath, "utf-8");
 
-  // Firebase config object
   const firebaseConfig = {
     apiKey: process.env.FIREBASE_API_KEY,
     authDomain: process.env.FIREBASE_AUTH_DOMAIN,
@@ -25,20 +23,24 @@ app.get("/", (req, res) => {
     appId: process.env.FIREBASE_APP_ID,
   };
 
-  // Prepare injected script with both Firebase and Supabase
-const injectedScript = `
-  <script>
-    window.__firebase_config = ${JSON.stringify(firebaseConfig)};
-    window.__supabase_url = "${process.env.SUPABASE_URL}";
-    window.__supabase_anon_key = "${process.env.SUPABASE_ANON_KEY}";
-  </script>
-`;
+  const supabaseConfig = {
+    url: process.env.SUPABASE_URL,
+    anonKey: process.env.SUPABASE_ANON_KEY,
+  };
 
-  // Inject the script right after <!DOCTYPE html>
+  // Safely inject JSON as text (no escaping problems)
+  const injectedJSON = JSON.stringify({ firebaseConfig, supabaseConfig });
+  const injectedScript = `
+    <script id="app-config" type="application/json">
+      ${injectedJSON}
+    </script>
+  `;
+
   html = html.replace("<!DOCTYPE html>", `<!DOCTYPE html>\n${injectedScript}`);
-
   res.send(html);
 });
 
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});
 
