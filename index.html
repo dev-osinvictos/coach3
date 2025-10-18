@@ -245,7 +245,7 @@ waitForFirebaseConfig().then(firebaseConfig => {
   try {
       const app = window.firebase.initializeApp(firebaseConfig);
       db = window.firebase.firestore(app);
-      db.settings({ experimentalForceLongPolling: true, merge: true });
+      db.settings({ experimentalForceLongPolling: true });
       auth = window.firebase.auth(app);
       window.firebase.firestore.setLogLevel('debug');
 
