@@ -233,8 +233,6 @@ async function initializeFirebaseAndAuth() {
       try {
         connectBtn.disabled = true;
         updateStatus("Connecting wallet...", 'info');
-        await initializeFirebaseAndAuth();
-
 
         // ✅ Aguarda Firebase estar pronto antes de prosseguir
         const firebaseReady = await initializeFirebaseAndAuth();
