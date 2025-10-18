@@ -224,6 +224,7 @@ async function initializeFirebaseAndAuth() {
   }
 }
 
+
     async function connectWallet() {
       if (!window.ethereum) {
         updateStatus("No Ethereum wallet found. Please install MetaMask.", 'error');
@@ -234,15 +235,19 @@ async function initializeFirebaseAndAuth() {
         updateStatus("Connecting wallet...", 'info');
         await initializeFirebaseAndAuth();
 
+
+        // ✅ Aguarda Firebase estar pronto antes de prosseguir
+        const firebaseReady = await initializeFirebaseAndAuth();
+        if (!firebaseReady) {
+          updateStatus("Firebase initialization failed.", "error");
+          connectBtn.disabled = false;
+          return;
+        }
+
         provider = new ethers.BrowserProvider(window.ethereum);
         signer = await provider.getSigner();
         const network = await provider.getNetwork();
         const account = await signer.getAddress();
-        const firebaseReady = await initializeFirebaseAndAuth();
-        if (!firebaseReady) {
-          updateStatus("Firebase initialization failed.", "error");
-          return;
-        }
         connectBtn.classList.add('hidden');
         bookBtn.classList.remove('hidden');
         connectionInfo.classList.remove('hidden');
