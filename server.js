@@ -1,22 +1,21 @@
-// server.js
 import express from "express";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
-import { fileURLToPath } from "url";
 
-dotenv.config(); // only for local testing; Render provides env vars in production
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Serve static files (images, css, etc.)
 app.use(express.static("public"));
 
 app.get("/", (req, res) => {
   const htmlPath = path.join(process.cwd(), "index.html");
   let html = fs.readFileSync(htmlPath, "utf-8");
 
-  // Inject Firebase + Supabase configs
+  // Firebase config object
   const firebaseConfig = {
     apiKey: process.env.FIREBASE_API_KEY,
     authDomain: process.env.FIREBASE_AUTH_DOMAIN,
@@ -26,6 +25,7 @@ app.get("/", (req, res) => {
     appId: process.env.FIREBASE_APP_ID,
   };
 
+  // Prepare injected script with both Firebase and Supabase
   const injectedScript = `
     <script>
       window.__firebase_config = '${JSON.stringify(firebaseConfig)}';
@@ -34,9 +34,11 @@ app.get("/", (req, res) => {
     </script>
   `;
 
+  // Inject the script right after <!DOCTYPE html>
   html = html.replace("<!DOCTYPE html>", `<!DOCTYPE html>\n${injectedScript}`);
+
   res.send(html);
 });
 
-app.listen(PORT, () => console.log("Server running on port " + PORT));
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 

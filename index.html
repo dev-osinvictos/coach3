@@ -11,54 +11,37 @@
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js"></script>
 
   <!-- Firebase SDK modules -->
-  <script type="module">
+ <!-- Supabase SDK (dynamic injection from server.js) -->
+<script type="module">
   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-  const SUPABASE_URL = "https://kzcjcykzajciczksdyir.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6Y2pjeWt6YWpjaWN6a3NkeWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3MzM3MzEsImV4cCI6MjA3NjMwOTczMX0.h_IQIy4baRW-rpWmuqpIk_vf4p2FLsXHCoychONkiJU";
+  // ✅ Dynamically injected values
+  const SUPABASE_URL = window.__supabase_url;
+  const SUPABASE_ANON_KEY = window.__supabase_anon_key;
 
+  // Create client
   window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, addDoc, collection, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    window.firebase = {
-      initializeApp,
-      getAuth,
-      signInAnonymously,
-      signInWithCustomToken,
-      onAuthStateChanged,
-      getFirestore,
-      doc,
-      addDoc,
-      collection,
-      setLogLevel
-    };
-  </script>
+  // Helper: Upload files to Supabase
+  window.uploadBookingFile = async (file, userId) => {
+    if (!file) return null;
+    const safeUserId = userId || "anonymous";
+    const path = `bookings/${safeUserId}/${Date.now()}_${file.name}`;
+    const { data, error } = await window.supabase.storage
+      .from("bookings")
+      .upload(path, file);
 
-  <!-- Supabase SDK for uploads -->
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    if (error) {
+      console.error("Supabase upload failed:", error);
+      return null;
+    }
 
-    // Create Supabase client
-    window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // Helper function for uploading files to Supabase
-    window.uploadBookingFile = async (file, userId) => {
-      if (!file) return null;
-      const path = `bookings/${userId}/${Date.now()}_${file.name}`;
-      const { data, error } = await window.supabase.storage
-        .from("bookings")
-        .upload(path, file);
-      if (error) {
-        console.error("Supabase upload failed:", error);
-        return null;
-      }
-      const publicURL = `${SUPABASE_URL}/storage/v1/object/public/bookings/${path}`;
-      console.log("Uploaded file:", publicURL);
-      return publicURL;
-    };
-  </script>
+    // Build the public URL
+    const publicURL = `${SUPABASE_URL}/storage/v1/object/public/bookings/${path}`;
+    console.log("Uploaded file:", publicURL);
+    return publicURL;
+  };
+</script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
