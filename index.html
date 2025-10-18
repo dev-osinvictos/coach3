@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coach Appointment Payment & Booking -- :)</title>
+    <title>Coach Appointment Payment & Booking ok</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Ethers.js for Web3 interaction -->
@@ -102,14 +102,16 @@
     <script>
         // --- Global Configuration ---
         const { ethers } = window;
-        // Firebase application ID is safe to read here
+        // Firebase configuration variables provided by the Canvas environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
         // --- Web3 Configuration ---
         // Recipient address (Coach's address) - lowercase for Ethers v6 compatibility.
         const COACH_ADDRESS = "0x8e843477103e3a968b4b335352358f5b12a45a62"; 
         const SEPOLIA_CHAIN_ID = 11155111; // Sepolia Network Chain ID
-        const APPOINTMENT_COST_ETH = 0.00001; 
+        const APPOINTMENT_COST_ETH = 0.00001;
 
         // --- DOM Elements ---
         const statusDisplay = document.getElementById('status-display');
@@ -168,63 +170,23 @@
             return true;
         }
 
-        /** * Polls the environment for the Firebase configuration variables with a timeout. 
-         * This handles the timing issue where the config isn't immediately available.
-         */
-        async function waitForFirebaseConfig(timeout = 10000, interval = 100) {
-            const startTime = Date.now();
-            let configString = null;
-            let token = null;
-
-            while (Date.now() - startTime < timeout) {
-                configString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-                token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-                if (configString) {
-                    // Success: Config string is available, now parse it
-                    try {
-                        return { 
-                            config: JSON.parse(configString), 
-                            token: token 
-                        };
-                    } catch (e) {
-                        console.error(`FATAL: Failed to parse __firebase_config. Raw string: ${configString}`, e);
-                        // Return null on critical parsing error
-                        return { config: null, token: null };
-                    }
-                }
-                
-                // Wait for the next interval
-                await new Promise(resolve => setTimeout(resolve, interval));
-            }
-            
-            // Timeout: return null config
-            return { config: null, token: null };
-        }
-
-        /** * Handles Firebase initialization and authentication. 
-         * Takes the already parsed config object and token string.
-         */
-        async function initializeFirebaseAndAuth(config, token) {
-            if (!window.firebase) {
-                console.error("Firebase Error: SDK modules not loaded into the window.");
-                return;
-            }
-            if (!config) {
-                console.error("Firebase Error: The necessary __firebase_config is missing or empty. Firestore save will not be possible.");
+        /** Handles Firebase initialization and authentication. */
+        async function initializeFirebaseAndAuth() {
+            if (!window.firebase || !firebaseConfig) {
+                console.error("Firebase SDK or config not available.");
                 return;
             }
 
             try {
                 // Initialize Firebase
-                const app = firebase.initializeApp(config);
+                const app = firebase.initializeApp(firebaseConfig);
                 db = firebase.getFirestore(app);
                 auth = firebase.getAuth(app);
                 firebase.setLogLevel('Debug'); // Enable logging
 
                 // Authenticate
-                if (token) {
-                    const userCredential = await firebase.signInWithCustomToken(auth, token);
+                if (initialAuthToken) {
+                    const userCredential = await firebase.signInWithCustomToken(auth, initialAuthToken);
                     userId = userCredential.user.uid;
                 } else {
                     const userCredential = await firebase.signInAnonymously(auth);
@@ -236,11 +198,11 @@
             }
         }
 
-        /** Saves booking details to Firestore (Public Collection). */
+        /** Saves booking details to Firestore. */
         async function saveBooking(payerAddress, txHash, selectedSlot) {
             if (!db || !userId) {
-                console.error("Firestore Error: Not initialized or user not authenticated. Cannot save booking.");
-                return false;
+                console.error("Firestore not initialized or user not authenticated.");
+                return;
             }
 
             const bookingData = {
@@ -253,14 +215,13 @@
             };
 
             try {
-                // Path: /artifacts/{appId}/public/data/bookings
-                // Uses the public path so the coach can easily view all bookings.
-                const collectionPath = `artifacts/${appId}/public/data/bookings`;
+                // Path: /artifacts/{appId}/users/{userId}/bookings
+                const collectionPath = `artifacts/${appId}/users/${userId}/bookings`;
                 const docRef = await firebase.addDoc(firebase.collection(db, collectionPath), bookingData);
-                console.log("Booking successfully saved to Public Firestore collection with ID:", docRef.id);
+                console.log("Booking saved to Firestore with ID:", docRef.id);
                 return true;
             } catch (e) {
-                console.error("Fatal Firestore Error: Could not add document.", e);
+                console.error("Error adding document to Firestore:", e);
                 return false;
             }
         }
@@ -276,20 +237,10 @@
 
             try {
                 connectBtn.disabled = true;
-                updateStatus("Connecting wallet and initializing services...", 'info');
+                updateStatus("Connecting wallet...", 'info');
                 
-                // Use a robust polling mechanism to wait for environment variables to be injected
-                const { config: currentFirebaseConfig, token: currentInitialAuthToken } = await waitForFirebaseConfig();
-
-                // Initialize Firebase first using the retrieved configuration
-                await initializeFirebaseAndAuth(currentFirebaseConfig, currentInitialAuthToken);
-
-                // Check if Firebase initialization failed due to missing config (db will be null)
-                if (!db) {
-                     updateStatus("Configuration Error: Booking data cannot be saved. Please reload or check console for details.", 'error');
-                     connectBtn.disabled = false;
-                     return;
-                }
+                // Initialize Firebase first
+                await initializeFirebaseAndAuth();
 
                 // Use Ethers.js v6 to connect
                 provider = new ethers.BrowserProvider(window.ethereum);
@@ -364,7 +315,7 @@
                         ? "Booking recorded successfully in the database."
                         : "WARNING: Payment succeeded, but failed to save booking to database. Check console.";
 
-                    updateStatus(`🎉 SUCCESS! Your session for ${selectedSlot} is booked! ${firestoreMessage} Transaction Hash: ${receipt.hash}`, 'success');
+                    updateStatus(`🎉 SUCCESS! Your session for ${selectedSlot} is booked! ${firestoreMessage} You can now monitor your wallet/database and follow up via LinkedIn DM to dev@osinvictos.com.br. Transaction Hash: ${receipt.hash}`, 'success');
 
                 } else {
                     updateStatus("Transaction failed on the blockchain.", 'error');
@@ -393,7 +344,7 @@
 
         // Initial check and listeners on load
         window.onload = () => {
-             // We ensure the UI displays the actual configured cost (0.00001 ETH)
+             // We ensure the UI displays the actual configured cost (0.01 ETH)
              document.getElementById('cost-display').textContent = `${APPOINTMENT_COST_ETH} Sepolia ETH`;
              document.getElementById('book-btn').textContent = `Pay ${APPOINTMENT_COST_ETH} ETH and Book Appointment`;
 
@@ -405,7 +356,6 @@
 
              // Listener to enable/disable book button based on slot selection
              appointmentSlot.addEventListener('change', () => {
-                // Check if signer is initialized (meaning wallet is connected) AND a slot is selected
                 if (signer && appointmentSlot.value !== "") {
                     bookBtn.disabled = false;
                 } else {
@@ -416,4 +366,3 @@
     </script>
 </body>
 </html>
-
