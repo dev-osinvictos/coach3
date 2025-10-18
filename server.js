@@ -26,13 +26,13 @@ app.get("/", (req, res) => {
   };
 
   // Prepare injected script with both Firebase and Supabase
-  const injectedScript = `
-    <script>
-      window.__firebase_config = '${JSON.stringify(firebaseConfig)}';
-      window.__supabase_url = "${process.env.SUPABASE_URL}";
-      window.__supabase_anon_key = "${process.env.SUPABASE_ANON_KEY}";
-    </script>
-  `;
+const injectedScript = `
+  <script>
+    window.__firebase_config = ${JSON.stringify(firebaseConfig)};
+    window.__supabase_url = "${process.env.SUPABASE_URL}";
+    window.__supabase_anon_key = "${process.env.SUPABASE_ANON_KEY}";
+  </script>
+`;
 
   // Inject the script right after <!DOCTYPE html>
   html = html.replace("<!DOCTYPE html>", `<!DOCTYPE html>\n${injectedScript}`);
