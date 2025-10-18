@@ -152,10 +152,17 @@
     const { ethers } = window;
 
     // --- Injected Firebase Config (from server.js)
-    const parsedInjectedConfig = (typeof window.__firebase_config !== 'undefined' && window.__firebase_config !== null)
-      ? (() => { try { return JSON.parse(window.__firebase_config); } catch (e) { console.error(e); return null; } })()
-      : null;
-    const firebaseConfig = parsedInjectedConfig;
+const firebaseConfig =
+  typeof window.__firebase_config === "object"
+    ? window.__firebase_config
+    : (() => {
+        try {
+          return JSON.parse(window.__firebase_config);
+        } catch (e) {
+          console.error("Failed to parse Firebase config:", e);
+          return null;
+        }
+      })();
     const initialAuthToken = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
 
     // --- Constants ---
