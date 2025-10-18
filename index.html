@@ -9,8 +9,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js"></script>
+  <!-- Firebase SDKs (v9 compat for easier integration) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-<script type="module">
+  <script type="module">
   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
   // Read safely injected JSON config
@@ -75,7 +79,7 @@
     return null;
   }
 };
-</script>
+  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
