@@ -87,6 +87,23 @@
   }
 };
   </script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+<script>
+async function checkBalance() {
+  if (!window.ethereum) return alert("Please connect MetaMask first.");
+
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const signer = await provider.getSigner();
+  const address = await signer.getAddress();
+  const balance = await provider.getBalance(address);
+
+  console.log(`💰 Wallet: ${address}`);
+  console.log(`💎 Balance: ${ethers.formatEther(balance)} ETH`);
+  alert(`💎 ${ethers.formatEther(balance)} Sepolia ETH`);
+}
+</script>
+
+<button onclick="checkBalance()">Check Balance</button>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
@@ -228,6 +245,7 @@ waitForFirebaseConfig().then(firebaseConfig => {
   try {
       const app = window.firebase.initializeApp(firebaseConfig);
       db = window.firebase.firestore(app);
+      db.settings({ experimentalForceLongPolling: true, merge: true });
       auth = window.firebase.auth(app);
       window.firebase.firestore.setLogLevel('debug');
 
