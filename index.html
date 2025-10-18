@@ -16,6 +16,7 @@
   // Read safely injected JSON config
   const appConfigEl = document.getElementById("app-config");
   const { firebaseConfig, supabaseConfig } = JSON.parse(appConfigEl.textContent.trim());
+  console.log("🔥 Firebase Config Loaded:", firebaseConfig);
 
   // Assign Firebase config globally
   window.__firebase_config = firebaseConfig;
