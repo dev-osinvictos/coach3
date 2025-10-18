@@ -39,7 +39,8 @@
             <p class="text-sm font-semibold text-indigo-700">Wallet Connected:</p>
             <p id="account-display" class="text-sm font-mono text-indigo-900 truncate mt-1"></p>
             <p class="text-sm font-semibold text-indigo-700 mt-2">Cost:</p>
-            <p class="text-lg font-bold text-indigo-900">0.001 Sepolia ETH</p>
+            <!-- Corrected display amount -->
+            <p class="text-lg font-bold text-indigo-900" id="cost-display">0.01 Sepolia ETH</p>
         </div>
 
         <!-- Action Buttons -->
@@ -54,7 +55,7 @@
                     class="w-full py-3 px-6 bg-green-500 text-white font-bold rounded-xl shadow-md hover:bg-green-600 transition duration-150 ease-in-out disabled:opacity-50 hidden"
                     onclick="bookAppointment()"
                     disabled>
-                Pay 0.001 ETH and Book Appointment
+                Pay 0.01 ETH and Book Appointment
             </button>
         </div>
 
@@ -73,7 +74,7 @@
         const { ethers } = window;
         const COACH_ADDRESS = "0x4dF18e7e10F57A33e145B7f73111C4736fE72F19"; // Placeholder address
         const SEPOLIA_CHAIN_ID = 11155111; // Sepolia Network Chain ID
-        const APPOINTMENT_COST_ETH = 0.001;
+        const APPOINTMENT_COST_ETH = 0.005;
 
         // --- DOM Elements ---
         const statusDisplay = document.getElementById('status-display');
@@ -112,7 +113,10 @@
 
         /** Checks if the current network is Sepolia. */
         async function checkNetwork(network) {
-            if (network.chainId !== SEPOLIA_CHAIN_ID) {
+            // IMPORTANT: network.chainId is a BigInt in Ethers v6, so we must convert it to a number for comparison
+            const currentChainId = Number(network.chainId);
+
+            if (currentChainId !== SEPOLIA_CHAIN_ID) {
                 updateStatus("Please switch your wallet to the Sepolia Test Network.", 'warning');
                 bookBtn.disabled = true;
                 return false;
@@ -146,12 +150,12 @@
                 connectionInfo.classList.remove('hidden');
                 accountDisplay.textContent = account;
 
-                // Set up event listener for network changes
+                // Listen for network changes using the standard provider event
                 window.ethereum.on('chainChanged', (chainId) => {
                     // Reload the page is generally safer for a simpler app
                     window.location.reload(); 
                 });
-
+                
                 // Check network status
                 await checkNetwork(network);
 
@@ -178,9 +182,10 @@
             updateStatus("Waiting for payment confirmation in your wallet...", 'warning');
 
             try {
+                // APPOINTMENT_COST_ETH is 0.01, ensuring this matches the UI
                 const tx = await signer.sendTransaction({
                     to: COACH_ADDRESS,
-                    value: ethers.parseEther(APPOINTMENT_COST_ETH.toString()), // Convert 0.1 to BigInt Wei
+                    value: ethers.parseEther(APPOINTMENT_COST_ETH.toString()), // Convert ETH amount to BigInt Wei
                 });
 
                 // Transaction sent, wait for confirmation
@@ -218,6 +223,10 @@
 
         // Initial check on load
         window.onload = () => {
+             // We also correct the UI to display the actual configured cost (0.01 ETH)
+             document.getElementById('cost-display').textContent = `${APPOINTMENT_COST_ETH} Sepolia ETH`;
+             document.getElementById('book-btn').textContent = `Pay ${APPOINTMENT_COST_ETH} ETH and Book Appointment`;
+
              if (typeof window.ethereum !== 'undefined') {
                 updateStatus("MetaMask detected. Click 'Connect Wallet' to begin.");
              } else {
