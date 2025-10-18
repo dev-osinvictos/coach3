@@ -40,7 +40,7 @@
             <p id="account-display" class="text-sm font-mono text-indigo-900 truncate mt-1"></p>
             <p class="text-sm font-semibold text-indigo-700 mt-2">Cost:</p>
             <!-- Corrected display amount -->
-            <p class="text-lg font-bold text-indigo-900" id="cost-display">0.01 Sepolia ETH</p>
+            <p class="text-lg font-bold text-indigo-900" id="cost-display">0.006 Sepolia ETH</p>
         </div>
 
         <!-- Action Buttons -->
@@ -55,7 +55,7 @@
                     class="w-full py-3 px-6 bg-green-500 text-white font-bold rounded-xl shadow-md hover:bg-green-600 transition duration-150 ease-in-out disabled:opacity-50 hidden"
                     onclick="bookAppointment()"
                     disabled>
-                Pay 0.01 ETH and Book Appointment
+                Pay 0.006 ETH and Book Appointment
             </button>
         </div>
 
@@ -72,9 +72,9 @@
     <script>
         // --- Web3 Configuration ---
         const { ethers } = window;
-        const COACH_ADDRESS = "0x4dF18e7e10F57A33e145B7f73111C4736fE72F19"; // Placeholder address
+        const COACH_ADDRESS = "0x8E843477103e3a968B4b335352358F5b12A45A62"; // Placeholder address
         const SEPOLIA_CHAIN_ID = 11155111; // Sepolia Network Chain ID
-        const APPOINTMENT_COST_ETH = 0.005;
+        const APPOINTMENT_COST_ETH = 0.006;
 
         // --- DOM Elements ---
         const statusDisplay = document.getElementById('status-display');
