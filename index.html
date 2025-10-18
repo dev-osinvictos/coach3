@@ -238,27 +238,37 @@
       }
     }
 
-    async function saveBooking(payerAddress, txHash, slot, fileURL=null) {
-      if (!db || !userId) return false;
-      const booking = {
-        payerAddress,
-        coachAddress: COACH_ADDRESS,
-        appointmentTime: slot,
-        costEth: APPOINTMENT_COST_ETH,
-        transactionHash: txHash,
-        fileURL,
-        timestamp: new Date().toISOString()
-      };
-      try {
-        const path = `artifacts/${appId}/users/${userId}/bookings`;
-        await window.firebase.addDoc(window.firebase.collection(db, path), booking);
-        console.log("Booking saved:", booking);
-        return true;
-      } catch (e) {
-        console.error("Error saving booking:", e);
-        return false;
-      }
-    }
+async function saveBooking(payerAddress, txHash, selectedSlot, fileURL = null) {
+  if (!db || !userId) {
+    console.error("Firestore not initialized or user not authenticated.", { db, userId });
+    return false;
+  }
+
+  const bookingData = {
+    payerAddress,
+    coachAddress: COACH_ADDRESS,
+    appointmentTime: selectedSlot,
+    costEth: APPOINTMENT_COST_ETH,
+    transactionHash: txHash,
+    fileURL,
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    // Caminho corrigido (coleção válida)
+    const collectionPath = `bookings/${userId}`;
+    const docRef = await window.firebase.addDoc(
+      window.firebase.collection(db, collectionPath),
+      bookingData
+    );
+
+    console.log("✅ Booking saved to Firestore:", docRef.id);
+    return true;
+  } catch (e) {
+    console.error("❌ Error adding document to Firestore:", e);
+    return false;
+  }
+}
 
     async function bookAppointment() {
       const slot = appointmentSlot.value;
