@@ -18,7 +18,7 @@
   const { firebaseConfig, supabaseConfig } = JSON.parse(appConfigEl.textContent.trim());
 
   // Assign Firebase config globally
-  window.__firebase_config = JSON.stringify(firebaseConfig);
+  window.__firebase_config = firebaseConfig;
 
   // Setup Supabase client
   const SUPABASE_URL = supabaseConfig.url;
