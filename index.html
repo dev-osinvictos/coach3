@@ -171,7 +171,7 @@
         /** * Polls the environment for the Firebase configuration variables with a timeout. 
          * This handles the timing issue where the config isn't immediately available.
          */
-        async function waitForFirebaseConfig(timeout = 5000, interval = 100) {
+        async function waitForFirebaseConfig(timeout = 10000, interval = 100) {
             const startTime = Date.now();
             let configString = null;
             let token = null;
