@@ -59,7 +59,7 @@
             <p class="text-sm font-semibold text-indigo-700">Wallet Connected:</p>
             <p id="account-display" class="text-sm font-mono text-indigo-900 truncate mt-1"></p>
             <p class="text-sm font-semibold text-indigo-700 mt-2">Cost:</p>
-            <p class="text-lg font-bold text-indigo-900" id="cost-display">0.00001 Sepolia ETH</p>
+            <p class="text-lg font-bold text-indigo-900" id="cost-display">0.000058 Sepolia ETH</p>
         </div>
 
         <!-- Appointment Selection -->
@@ -85,7 +85,7 @@
                     class="w-full py-3 px-6 bg-green-500 text-white font-bold rounded-xl shadow-md hover:bg-green-600 transition duration-150 ease-in-out disabled:opacity-50 hidden"
                     onclick="bookAppointment()"
                     disabled>
-                Pay 0.00001 ETH and Book Appointment
+                Pay 0.000058 ETH and Book Appointment
             </button>
         </div>
 
@@ -111,7 +111,7 @@
         // Recipient address (Coach's address) - lowercase for Ethers v6 compatibility.
         const COACH_ADDRESS = "0x8e843477103e3a968b4b335352358f5b12a45a62"; 
         const SEPOLIA_CHAIN_ID = 11155111; // Sepolia Network Chain ID
-        const APPOINTMENT_COST_ETH = 0.00001;
+        const APPOINTMENT_COST_ETH = 0.000058;
 
         // --- DOM Elements ---
         const statusDisplay = document.getElementById('status-display');
@@ -172,8 +172,13 @@
 
         /** Handles Firebase initialization and authentication. */
         async function initializeFirebaseAndAuth() {
-            if (!window.firebase || !firebaseConfig) {
-                console.error("Firebase SDK or config not available.");
+            if (!window.firebase) {
+                console.error("Firebase Error: SDK modules not loaded into the window.");
+                return;
+            }
+            if (!firebaseConfig) {
+                // This explains the "Firebase SDK or config not available" console message.
+                console.error("Firebase Error: The necessary __firebase_config environment variable is missing or empty. Firestore save will not be possible.");
                 return;
             }
 
@@ -201,8 +206,8 @@
         /** Saves booking details to Firestore. */
         async function saveBooking(payerAddress, txHash, selectedSlot) {
             if (!db || !userId) {
-                console.error("Firestore not initialized or user not authenticated.");
-                return;
+                console.error("Firestore Error: Not initialized or user not authenticated. Cannot save booking.");
+                return false;
             }
 
             const bookingData = {
@@ -215,13 +220,14 @@
             };
 
             try {
-                // Path: /artifacts/{appId}/users/{userId}/bookings
-                const collectionPath = `artifacts/${appId}/users/${userId}/bookings`;
+                // IMPORTANT CHANGE: Using public data path so the coach (you) can read all bookings.
+                // Path: /artifacts/{appId}/public/data/bookings
+                const collectionPath = `artifacts/${appId}/public/data/bookings`;
                 const docRef = await firebase.addDoc(firebase.collection(db, collectionPath), bookingData);
-                console.log("Booking saved to Firestore with ID:", docRef.id);
+                console.log("Booking successfully saved to Public Firestore collection with ID:", docRef.id);
                 return true;
             } catch (e) {
-                console.error("Error adding document to Firestore:", e);
+                console.error("Fatal Firestore Error: Could not add document.", e);
                 return false;
             }
         }
@@ -315,7 +321,7 @@
                         ? "Booking recorded successfully in the database."
                         : "WARNING: Payment succeeded, but failed to save booking to database. Check console.";
 
-                    updateStatus(`🎉 SUCCESS! Your session for ${selectedSlot} is booked! ${firestoreMessage} You can now monitor your wallet/database and follow up via LinkedIn DM to dev@osinvictos.com.br. Transaction Hash: ${receipt.hash}`, 'success');
+                    updateStatus(`🎉 SUCCESS! Your session for ${selectedSlot} is booked! ${firestoreMessage} Remember to monitor the database for new bookings and follow up via LinkedIn DM to dev@osinvictos.com.br. Transaction Hash: ${receipt.hash}`, 'success');
 
                 } else {
                     updateStatus("Transaction failed on the blockchain.", 'error');
