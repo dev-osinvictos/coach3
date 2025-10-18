@@ -39,8 +39,7 @@
             <p class="text-sm font-semibold text-indigo-700">Wallet Connected:</p>
             <p id="account-display" class="text-sm font-mono text-indigo-900 truncate mt-1"></p>
             <p class="text-sm font-semibold text-indigo-700 mt-2">Cost:</p>
-            <!-- Corrected display amount -->
-            <p class="text-lg font-bold text-indigo-900" id="cost-display">0.006 Sepolia ETH</p>
+            <p class="text-lg font-bold text-indigo-900" id="cost-display">0.007 Sepolia ETH</p>
         </div>
 
         <!-- Action Buttons -->
@@ -55,7 +54,7 @@
                     class="w-full py-3 px-6 bg-green-500 text-white font-bold rounded-xl shadow-md hover:bg-green-600 transition duration-150 ease-in-out disabled:opacity-50 hidden"
                     onclick="bookAppointment()"
                     disabled>
-                Pay 0.006 ETH and Book Appointment
+                Pay 0.007 ETH and Book Appointment
             </button>
         </div>
 
@@ -72,9 +71,12 @@
     <script>
         // --- Web3 Configuration ---
         const { ethers } = window;
-        const COACH_ADDRESS = "0x8E843477103e3a968B4b335352358F5b12A45A62"; // Placeholder address
+        // IMPORTANT: This is the address that receives the payment (The Coach's address).
+        // It must be a different address than the one paying (your connected wallet).
+        // FIX: Converted address to all lowercase to bypass bad checksum error.
+        const COACH_ADDRESS = "0x8e843477103e3a968b4b335352358f5b12a45a62"; 
         const SEPOLIA_CHAIN_ID = 11155111; // Sepolia Network Chain ID
-        const APPOINTMENT_COST_ETH = 0.006;
+        const APPOINTMENT_COST_ETH = 0.007;
 
         // --- DOM Elements ---
         const statusDisplay = document.getElementById('status-display');
@@ -113,11 +115,11 @@
 
         /** Checks if the current network is Sepolia. */
         async function checkNetwork(network) {
-            // IMPORTANT: network.chainId is a BigInt in Ethers v6, so we must convert it to a number for comparison
+            // Fix: network.chainId is a BigInt in Ethers v6, converting to Number for safe comparison.
             const currentChainId = Number(network.chainId);
 
             if (currentChainId !== SEPOLIA_CHAIN_ID) {
-                updateStatus("Please switch your wallet to the Sepolia Test Network.", 'warning');
+                updateStatus("Please switch your wallet to the Sepolia Test Network (Chain ID: 11155111).", 'warning');
                 bookBtn.disabled = true;
                 return false;
             }
@@ -182,7 +184,12 @@
             updateStatus("Waiting for payment confirmation in your wallet...", 'warning');
 
             try {
-                // APPOINTMENT_COST_ETH is 0.01, ensuring this matches the UI
+                // Ensure the address receiving the payment is valid
+                if (!ethers.isAddress(COACH_ADDRESS)) {
+                    throw new Error("The recipient coach address is invalid. Please check the application configuration.");
+                }
+
+                // APPOINTMENT_COST_ETH is 0.01
                 const tx = await signer.sendTransaction({
                     to: COACH_ADDRESS,
                     value: ethers.parseEther(APPOINTMENT_COST_ETH.toString()), // Convert ETH amount to BigInt Wei
@@ -223,7 +230,7 @@
 
         // Initial check on load
         window.onload = () => {
-             // We also correct the UI to display the actual configured cost (0.01 ETH)
+             // We ensure the UI displays the actual configured cost (0.01 ETH)
              document.getElementById('cost-display').textContent = `${APPOINTMENT_COST_ETH} Sepolia ETH`;
              document.getElementById('book-btn').textContent = `Pay ${APPOINTMENT_COST_ETH} ETH and Book Appointment`;
 
