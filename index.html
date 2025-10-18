@@ -165,14 +165,19 @@
     });
   }
 
-    waitForFirebaseConfig().then(firebaseConfig => {
-    if (!firebaseConfig) {
-      console.error("❌ Firebase config not injected by server.");
-    } else {
-      console.log("🔥 Firebase config detected late:", firebaseConfig);
-    }
-    const initialAuthToken = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
-    });
+waitForFirebaseConfig().then(firebaseConfig => {
+  if (!firebaseConfig) {
+    console.error("❌ Firebase config not injected by server.");
+  } else {
+    console.log("🔥 Firebase config detected late:", firebaseConfig);
+  }
+
+  // 🔹 Make token global
+  window.initialAuthToken =
+    typeof window.__initial_auth_token !== 'undefined'
+      ? window.__initial_auth_token
+      : null;
+});
     // --- Constants ---
     const COACH_ADDRESS = "0x8e843477103e3a968b4b335352358f5b12a45a62";
     const SEPOLIA_CHAIN_ID = 11155111;
@@ -228,11 +233,11 @@
 
     let credential;
 
-    if (initialAuthToken && initialAuthToken !== "null") {
-      credential = await window.firebase.signInWithCustomToken(auth, initialAuthToken);
-    } else {
-      credential = await auth.signInAnonymously();
-    }
+  if (window.initialAuthToken && window.initialAuthToken !== "null") {
+  credential = await auth.signInWithCustomToken(window.initialAuthToken);
+} else {
+  credential = await auth.signInAnonymously();
+}
 
     // 🔹 Espera garantir que o usuário esteja definido
     await new Promise((resolve) => {
