@@ -47,19 +47,19 @@ app.post("/saveBooking", async (req, res) => {
     const bookingData = req.body;
     console.log("🆕 Novo booking recebido:", bookingData);
 
-    // Salva no Firestore
     const docRef = await addDoc(collection(db, "bookings"), {
       ...bookingData,
       timestamp: Date.now(),
     });
 
-    // Envia SMS para o coach
+    // 🔔 Envia SMS antes de retornar
+    console.log("🔥 Chamando sendSMS...");
     await sendSMS(
-      "+5519988108063", // 👉 Substitua pelo seu número real (ex: +5511999999999)
-      `📅 Novo booking!\nJogador: ${bookingData.payerAddress}\nHorário: ${bookingData.appointmentTime}`
+      "+5519988108063", // número do coach
+      `📅 Novo booking!\n👤 Jogador: ${bookingData.payerAddress}\n🕒 Horário: ${bookingData.appointmentTime}`
     );
-
     console.log("✅ Booking salvo e SMS enviado.");
+
     res.json({ success: true, id: docRef.id });
   } catch (error) {
     console.error("❌ Erro ao salvar booking:", error);
