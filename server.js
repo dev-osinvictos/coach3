@@ -67,6 +67,17 @@ app.post("/saveBooking", async (req, res) => {
   }
 });
 
+app.get("/test-sms", async (req, res) => {
+  console.log("🚀 /test-sms endpoint chamado");
+  try {
+    await sendSMS("+5519988108063", "🔔 Teste direto do servidor via Twilio!");
+    res.send("✅ SMS de teste enviado (verifique o celular e logs)");
+  } catch (e) {
+    console.error("❌ Erro no /test-sms:", e);
+    res.status(500).send("Erro: " + e.message);
+  }
+});
+
 // 🔹 Endpoint de configuração (para o frontend)
 app.get("/config", (req, res) => {
   res.json({
