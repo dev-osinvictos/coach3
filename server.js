@@ -6,7 +6,9 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc } from "firebase/firestore";
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ["https://osinvictos.com.br", "https://www.osinvictos.com.br"],
+}));
 app.use(bodyParser.json());
 
 // 🔹 Firebase config
