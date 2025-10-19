@@ -25,8 +25,8 @@
   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
   // Read safely injected JSON config
-  const appConfigEl = document.getElementById("app-config");
-  const { firebaseConfig, supabaseConfig } = JSON.parse(appConfigEl.textContent.trim());
+  const configRes = await fetch("https://seuapp.onrender.com/config");
+  const { firebaseConfig, supabaseConfig } = await configRes.json();
   console.log("🔥 Firebase Config Loaded:", firebaseConfig);
 
   // Assign Firebase config globally
