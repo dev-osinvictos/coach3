@@ -113,7 +113,7 @@ app.get("/config", (req, res) => {
 
   const supabaseConfig = {
     supabaseUrl: process.env.SUPABASE_URL,
-    supabaseKey: process.env.SUPABASE_KEY,
+    supabaseKey: process.env.SUPABASE_ANON_KEY,
   };
 
   if (!firebaseConfig.apiKey) {
