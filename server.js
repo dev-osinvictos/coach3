@@ -41,25 +41,28 @@ async function sendSMS(phone, message) {
   }
 }
 
-// 🔹 Endpoint de salvar booking e enviar SMS
+// ==========================
+//  Rota para salvar booking
+// ==========================
 app.post("/saveBooking", async (req, res) => {
   try {
     const bookingData = req.body;
     console.log("🆕 Novo booking recebido:", bookingData);
 
+    // 🔹 Salva no Firestore
     const docRef = await addDoc(collection(db, "bookings"), {
       ...bookingData,
       timestamp: Date.now(),
     });
 
-    // 🔔 Envia SMS antes de retornar
+    // 🔹 Envia SMS antes de finalizar a resposta
     console.log("🔥 Chamando sendSMS...");
     await sendSMS(
-      "+5519988108063", // número do coach
+      "+5519988108063", // número do coach (você)
       `📅 Novo booking!\n👤 Jogador: ${bookingData.payerAddress}\n🕒 Horário: ${bookingData.appointmentTime}`
     );
-    console.log("✅ Booking salvo e SMS enviado.");
 
+    console.log("✅ Booking salvo e SMS enviado com sucesso.");
     res.json({ success: true, id: docRef.id });
   } catch (error) {
     console.error("❌ Erro ao salvar booking:", error);
