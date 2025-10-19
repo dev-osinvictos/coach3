@@ -2,6 +2,14 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
+import cors from "cors";
+
+app.use(cors({
+  origin: [
+    "https://www.osinvictos.com.br", // seu domínio principal
+    "https://osinvictos.com.br",     // sem o www, se aplicável
+  ],
+}));
 
 dotenv.config();
 
