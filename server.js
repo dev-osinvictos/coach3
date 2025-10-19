@@ -65,24 +65,36 @@ app.post("/saveBooking", async (req, res) => {
     const bookingData = req.body;
     console.log("🆕 Novo booking recebido:", bookingData);
 
-    // 🔹 Salva no Firestore
+    // 🔹 1️⃣ Salva no Firestore
     const docRef = await addDoc(collection(db, "bookings"), {
       ...bookingData,
       timestamp: Date.now(),
     });
 
-    // 🔹 Envia SMS antes de finalizar a resposta
-    console.log("🔥 Chamando sendSMS...");
-    await sendSMS(
-      "+5519988108063", // número do coach (você)
-      `📅 Novo booking!\n👤 Jogador: ${bookingData.payerAddress}\n🕒 Horário: ${bookingData.appointmentTime}`
-    );
+    console.log("✅ Booking salvo no Firestore:", docRef.id);
 
-    console.log("✅ Booking salvo e SMS enviado com sucesso.");
-    res.json({ success: true, id: docRef.id });
+    // 🔹 2️⃣ Condicional: só envia SMS se Firestore salvar com sucesso
+    if (docRef.id) {
+      console.log("🎯 SUCCESS! Booking saved successfully — enviando SMS...");
+      try {
+        await sendSMS(
+          "+5519988108063",
+          `📅 Novo booking!\n👤 Jogador: ${bookingData.payerAddress}\n🕒 Horário: ${bookingData.appointmentTime}`
+        );
+        console.log("📩 SMS enviado com sucesso ✅");
+        res.json({ success: true, id: docRef.id, sms: true });
+      } catch (smsErr) {
+        console.error("⚠️ Booking salvo, mas erro ao enviar SMS:", smsErr);
+        res.json({ success: true, id: docRef.id, sms: false });
+      }
+    } else {
+      console.warn("⚠️ Firestore não retornou ID — SMS não enviado.");
+      res.json({ success: false, sms: false });
+    }
+
   } catch (error) {
-    console.error("❌ Erro ao salvar booking:", error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error("❌ Erro geral ao salvar booking:", error);
+    res.status(500).json({ success: false, error: error.message, sms: false });
   }
 });
 
