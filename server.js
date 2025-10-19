@@ -84,7 +84,9 @@ app.get("/test-sms", async (req, res) => {
 });
 
 // 🔹 Endpoint de configuração (para o frontend)
+// ✅ Rota para enviar as configs do Firebase e Supabase ao frontend
 app.get("/config", (req, res) => {
+  console.log("📡 Config requested");
   res.json({
     firebaseConfig: {
       apiKey: process.env.FIREBASE_API_KEY,
@@ -95,8 +97,8 @@ app.get("/config", (req, res) => {
       appId: process.env.FIREBASE_APP_ID,
     },
     supabaseConfig: {
-      url: process.env.SUPABASE_URL,
-      anonKey: process.env.SUPABASE_ANON_KEY,
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseKey: process.env.SUPABASE_KEY,
     },
   });
 });
