@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
-import fetch from "node-fetch";
 import bodyParser from "body-parser";
+import twilio from "twilio";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc } from "firebase/firestore";
 
@@ -11,37 +11,36 @@ app.use(bodyParser.json());
 
 // 🔹 Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyDqcbVrJe2IRyjFkPQGGwnxHnxZisn0VyE",
-  authDomain: "coach3-9e29a.firebaseapp.com",
-  projectId: "coach3-9e29a",
-  storageBucket: "coach3-9e29a.appspot.com",
-  messagingSenderId: "1021299206395",
-  appId: "1:1021299206395:web:e80db36bbe5cba9956685e",
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.FIREBASE_APP_ID,
 };
 
+// 🔹 Inicializa Firebase
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 
-// 🔹 Função auxiliar para enviar SMS
+// 🔹 Inicializa Twilio client
+const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
+
+// 🔹 Função auxiliar para enviar SMS com Twilio
 async function sendSMS(phone, message) {
   try {
-    const res = await fetch("https://textbelt.com/text", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        phone: phone,
-        message: message,
-        key: "textbelt", // chave gratuita = 1 SMS/dia
-      }),
+    const sms = await client.messages.create({
+      body: message,
+      from: process.env.TWILIO_PHONE,
+      to: phone,
     });
-    const data = await res.json();
-    console.log("📩 SMS result:", data);
+    console.log("📩 Twilio SMS sent:", sms.sid);
   } catch (err) {
-    console.error("❌ SMS send error:", err);
+    console.error("❌ Twilio SMS error:", err);
   }
 }
 
-// 🔹 Endpoint de salvar booking e disparar SMS
+// 🔹 Endpoint de salvar booking e enviar SMS
 app.post("/saveBooking", async (req, res) => {
   try {
     const bookingData = req.body;
@@ -53,13 +52,13 @@ app.post("/saveBooking", async (req, res) => {
       timestamp: Date.now(),
     });
 
-    // 🔔 Envia SMS pro coach
+    // Envia SMS para o coach
     await sendSMS(
-      "+5519988108063", // 👉 Coloque seu número completo (ex: +5511999999999)
-      `📅 Novo booking recebido!\nJogador: ${bookingData.payerAddress}\nHorário: ${bookingData.appointmentTime}`
+      "+5519988108063", // 👉 Substitua pelo seu número real (ex: +5511999999999)
+      `📅 Novo booking!\nJogador: ${bookingData.payerAddress}\nHorário: ${bookingData.appointmentTime}`
     );
 
-    console.log("✅ Booking salvo e SMS enviado");
+    console.log("✅ Booking salvo e SMS enviado.");
     res.json({ success: true, id: docRef.id });
   } catch (error) {
     console.error("❌ Erro ao salvar booking:", error);
@@ -67,11 +66,25 @@ app.post("/saveBooking", async (req, res) => {
   }
 });
 
-// 🔹 Endpoint de config (mantém o mesmo)
+// 🔹 Endpoint de configuração (para o frontend)
 app.get("/config", (req, res) => {
-  res.json({ firebaseConfig });
+  res.json({
+    firebaseConfig: {
+      apiKey: process.env.FIREBASE_API_KEY,
+      authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.FIREBASE_APP_ID,
+    },
+    supabaseConfig: {
+      url: process.env.SUPABASE_URL,
+      anonKey: process.env.SUPABASE_ANON_KEY,
+    },
+  });
 });
 
+// 🔹 Inicia servidor
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 

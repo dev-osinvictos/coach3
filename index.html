@@ -326,6 +326,38 @@ waitForFirebaseConfig().then(firebaseConfig => {
     }
   }
 
+ // 🔹 Upload de arquivo para Supabase Storage
+  window.uploadBookingFile = async function (file, userId) {
+    try {
+      if (!window.supabase) {
+        console.error("❌ Supabase not initialized");
+        return null;
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const filePath = `bookings/${userId}/${Date.now()}.${fileExt}`;
+
+      const { data, error } = await window.supabase.storage
+        .from('bookings') // nome do seu bucket
+        .upload(filePath, file, {
+          contentType: file.type,
+        });
+
+      if (error) throw error;
+
+      console.log("✅ File uploaded to Supabase:", data.path);
+
+      const { data: publicData } = window.supabase.storage
+        .from('bookings')
+        .getPublicUrl(data.path);
+
+      return publicData.publicUrl;
+    } catch (e) {
+      console.error("❌ Error uploading file:", e);
+      return null;
+    }
+  };
+
   async function bookAppointment() {
     const slot = appointmentSlot.value;
     if (!signer || !slot)
