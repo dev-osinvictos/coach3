@@ -98,23 +98,32 @@ app.get("/test-sms", async (req, res) => {
 });
 
 // 🔹 Endpoint de configuração (para o frontend)
-// ✅ Rota para enviar as configs do Firebase e Supabase ao frontend
+// ✅ Rota que envia Firebase e Supabase configs ao frontend
 app.get("/config", (req, res) => {
-  console.log("📡 Config requested");
-  res.json({
-    firebaseConfig: {
-      apiKey: process.env.FIREBASE_API_KEY,
-      authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.FIREBASE_APP_ID,
-    },
-    supabaseConfig: {
-      supabaseUrl: process.env.SUPABASE_URL,
-      supabaseKey: process.env.SUPABASE_KEY,
-    },
-  });
+  console.log("📡 /config solicitado");
+
+  const firebaseConfig = {
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.FIREBASE_APP_ID,
+  };
+
+  const supabaseConfig = {
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseKey: process.env.SUPABASE_KEY,
+  };
+
+  if (!firebaseConfig.apiKey) {
+    console.error("❌ Firebase configuration missing");
+  }
+  if (!supabaseConfig.supabaseUrl || !supabaseConfig.supabaseKey) {
+    console.error("❌ Supabase configuration missing");
+  }
+
+  res.json({ firebaseConfig, supabaseConfig });
 });
 
 // 🔹 Inicia servidor
