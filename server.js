@@ -6,8 +6,22 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc } from "firebase/firestore";
 
 const app = express();
+// ✅ Configure CORS antes de qualquer rota
+const allowedOrigins = [
+  "https://www.osinvictos.com.br",
+  "https://osinvictos.com.br",
+  "https://coachappoint.onrender.com",
+  "http://localhost:3000" // opcional para testes locais
+];
+
 app.use(cors({
-  origin: ["https://osinvictos.com.br", "https://www.osinvictos.com.br"],
+  origin: function (origin, callback) {
+    // Permitir sem header Origin (ex: test via curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
 }));
 app.use(bodyParser.json());
 
