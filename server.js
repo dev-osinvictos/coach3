@@ -11,12 +11,12 @@ app.use(bodyParser.json());
 
 // 🔹 Firebase config
 const firebaseConfig = {
-  apiKey: "SEU_API_KEY",
-  authDomain: "SEU_AUTH_DOMAIN",
-  projectId: "SEU_PROJECT_ID",
-  storageBucket: "SEU_STORAGE_BUCKET",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId: "SEU_APP_ID",
+  apiKey: "AIzaSyDqcbVrJe2IRyjFkPQGGwnxHnxZisn0VyE",
+  authDomain: "coach3-9e29a.firebaseapp.com",
+  projectId: "coach3-9e29a",
+  storageBucket: "coach3-9e29a.appspot.com",
+  messagingSenderId: "1021299206395",
+  appId: "1:1021299206395:web:e80db36bbe5cba9956685e",
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
