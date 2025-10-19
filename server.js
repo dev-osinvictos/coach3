@@ -28,6 +28,7 @@ const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // 🔹 Função auxiliar para enviar SMS com Twilio
 async function sendSMS(phone, message) {
+  console.log("🚀 Enviando SMS via Twilio:", phone, message);
   try {
     const sms = await client.messages.create({
       body: message,
