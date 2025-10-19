@@ -294,81 +294,94 @@ waitForFirebaseConfig().then(firebaseConfig => {
       }
     }
 
-async function saveBooking(payerAddress, txHash, selectedSlot, fileURL = null) {
-  if (!db || !userId) {
-    console.error("Firestore not initialized or user not authenticated.", { db, userId });
-    return false;
+ async function saveBooking(payerAddress, txHash, selectedSlot, fileURL = null) {
+    if (!db || !userId) {
+      console.error("Firestore not initialized or user not authenticated.", { db, userId });
+      return false;
+    }
+
+    const bookingData = {
+      payerAddress,
+      coachAddress: COACH_ADDRESS,
+      appointmentTime: selectedSlot,
+      costEth: APPOINTMENT_COST_ETH,
+      transactionHash: txHash,
+      fileURL,
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      // ✅ Usando API compat do Firestore
+      // Cria ou usa a coleção "bookings" e adiciona o documento
+      const docRef = await db.collection("bookings").add({
+        userId,
+        ...bookingData,
+      });
+
+      console.log("✅ Booking saved to Firestore:", docRef.id);
+      return true;
+    } catch (e) {
+      console.error("❌ Error adding document to Firestore:", e);
+      return false;
+    }
   }
 
-  const bookingData = {
-    payerAddress,
-    coachAddress: COACH_ADDRESS,
-    appointmentTime: selectedSlot,
-    costEth: APPOINTMENT_COST_ETH,
-    transactionHash: txHash,
-    fileURL,
-    timestamp: new Date().toISOString(),
-  };
+  async function bookAppointment() {
+    const slot = appointmentSlot.value;
+    if (!signer || !slot)
+      return updateStatus("Wallet not connected or slot missing.", "error");
 
-  try {
-    // Caminho corrigido (coleção válida)
-    const collectionPath = `bookings/${userId}`;
-    const docRef = await window.firebase.addDoc(
-      window.firebase.collection(db, collectionPath),
-      bookingData
-    );
+    const payerAddress = await signer.getAddress();
+    bookBtn.disabled = true;
+    appointmentSlot.disabled = true;
+    loadingSpinner.classList.remove("hidden");
+    updateStatus(`Booking ${slot}... Confirm in your wallet.`, "warning");
 
-    console.log("✅ Booking saved to Firestore:", docRef.id);
-    return true;
-  } catch (e) {
-    console.error("❌ Error adding document to Firestore:", e);
-    return false;
-  }
-}
+    try {
+      const tx = await signer.sendTransaction({
+        to: COACH_ADDRESS,
+        value: ethers.parseEther(APPOINTMENT_COST_ETH.toString()),
+      });
 
-    async function bookAppointment() {
-      const slot = appointmentSlot.value;
-      if (!signer || !slot) return updateStatus("Wallet not connected or slot missing.", 'error');
-      const payerAddress = await signer.getAddress();
-      bookBtn.disabled = true; appointmentSlot.disabled = true; loadingSpinner.classList.remove('hidden');
-      updateStatus(`Booking ${slot}... Confirm in your wallet.`, 'warning');
-      try {
-        const tx = await signer.sendTransaction({
-          to: COACH_ADDRESS,
-          value: ethers.parseEther(APPOINTMENT_COST_ETH.toString())
-        });
-        updateStatus(`Transaction sent. Waiting for confirmation...`, 'warning');
-        const receipt = await tx.wait();
-        loadingSpinner.classList.add('hidden');
-        if (receipt && receipt.status === 1) {
-          // 🆕 Upload optional file to Supabase
+      updateStatus(`Transaction sent. Waiting for confirmation...`, "warning");
+      const receipt = await tx.wait();
+      loadingSpinner.classList.add("hidden");
+
+      if (receipt && receipt.status === 1) {
+        // 🆕 Upload optional file to Supabase
         const file = document.getElementById("booking-file").files[0];
         let fileURL = null;
-        const safeUserId = userId || "anonymous";  // fallback if userId isn't ready
+        const safeUserId = userId || "anonymous"; // fallback
 
         if (file) {
           updateStatus("Uploading file to Supabase...", "info");
           fileURL = await window.uploadBookingFile(file, safeUserId);
         }
-          const saved = await saveBooking(payerAddress, receipt.hash, slot, fileURL);
-          const msg = saved ? "Booking saved successfully." : "Payment succeeded but booking not saved.";
-          updateStatus(`🎉 SUCCESS! ${msg} Tx: ${receipt.hash}`, 'success');
-        } else {
-          updateStatus("Transaction failed on blockchain.", 'error');
-          bookBtn.disabled = false; appointmentSlot.disabled = false;
-        }
-      } catch (e) {
-        console.error("Payment error:", e);
-        loadingSpinner.classList.add('hidden');
-        bookBtn.disabled = false; appointmentSlot.disabled = false;
-        const msg = e.code === 'ACTION_REJECTED'
-          ? "Transaction rejected by user."
-          : e.message.includes('insufficient funds')
-            ? "Insufficient funds."
-            : `Payment failed: ${e.message}`;
-        updateStatus(msg, 'error');
+
+        const saved = await saveBooking(payerAddress, receipt.hash, slot, fileURL);
+        const msg = saved
+          ? "Booking saved successfully."
+          : "Payment succeeded but booking not saved.";
+        updateStatus(`🎉 SUCCESS! ${msg} Tx: ${receipt.hash}`, "success");
+      } else {
+        updateStatus("Transaction failed on blockchain.", "error");
+        bookBtn.disabled = false;
+        appointmentSlot.disabled = false;
       }
+    } catch (e) {
+      console.error("Payment error:", e);
+      loadingSpinner.classList.add("hidden");
+      bookBtn.disabled = false;
+      appointmentSlot.disabled = false;
+      const msg =
+        e.code === "ACTION_REJECTED"
+          ? "Transaction rejected by user."
+          : e.message.includes("insufficient funds")
+          ? "Insufficient funds."
+          : `Payment failed: ${e.message}`;
+      updateStatus(msg, "error");
     }
+  }
 
     window.onload = () => {
       document.getElementById("connect-btn").addEventListener("click", connectWallet);
